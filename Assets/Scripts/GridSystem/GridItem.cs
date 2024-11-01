@@ -159,7 +159,7 @@ namespace GridSystem
             return state ? aliveColour : deadColour;
         }
 
-        public void ResetItem(bool instant = true)
+        public void ResetItem()
         {
             SetState(true);
         }

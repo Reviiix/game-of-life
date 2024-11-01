@@ -10,7 +10,7 @@ namespace StateManagement.States
     public class Evolve : State
     {
         private const float MinimumTime = float.Epsilon;
-        private const float MaximumTime = 10;
+        private const float MaximumTime = 5;
         [SerializeField] [Range(MinimumTime, MaximumTime)] private float time;
         private WaitForSeconds waitTime;
         [SerializeField] public Slider speedSlider;

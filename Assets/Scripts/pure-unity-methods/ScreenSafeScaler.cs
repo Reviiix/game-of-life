@@ -17,7 +17,7 @@ namespace pure_unity_methods
         private Rect currentSafeArea;
         private ScreenOrientation currentOrientation = ScreenOrientation.AutoRotation;
     
-        private void Awake()
+        private void Start()
         {
             if (initialised) return;
             Initialise();
@@ -34,7 +34,7 @@ namespace pure_unity_methods
 
         private void OnValidate()
         {
-            ApplySafeArea();
+            //ApplySafeArea();
         }
 
         private void OnEnable()

@@ -1,41 +1,57 @@
 using System.Collections;
 using GridSystem;
+using Menu;
 using pure_unity_methods.StateManagement;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace StateManagement
 {
     public class GameOfLifeStateManager : SequentialStateManager
     {
-        private static bool Paused { get; set; } = true;
+        public bool Paused { get; private set; } = true;
+        [Header("Count Down")]
+        [SerializeField] [Range(MinimumSeconds, MaximumSeconds)] private int seconds;
+        [FormerlySerializedAs("countdown")] [SerializeField]private CountdownStartText countdownStart;
+        private const int MinimumSeconds = 1;
+        private const int MaximumSeconds = 5;
 
         public void StartGame()
         {
-            if (GridManager.Instance.IsGameValid())
+            Paused = false;
+            GridManager.Instance.EnableInteractions(false);
+            StartCoroutine(countdownStart.CountDown(seconds, GridManager.Instance.RandomisedColour, () =>
             {
-                StartCoroutine(StartGameCoRoutine());
-            }
-            else
-            {
-                MenuManager.Instance.EnableInvalidGame();
-            }
+                if (GridManager.Instance.IsGameValid())
+                {
+                    GridManager.Instance.OptimiseGrid();
+                    ProgressState();
+                }
+                else
+                {
+                    MenuManager.Instance.EnableInvalidGame();
+                    GridManager.Instance.EnableInteractions();
+                }
+            }));
         }
 
-        private IEnumerator StartGameCoRoutine()
+        public override void ProgressState()
         {
-            GridManager.Instance.OptimiseGrid();
-            MenuManager.Instance.EnableMain(false);
-            yield return new WaitForSeconds(3);
-            ProgressState();
+            if (Paused) return;
+            base.ProgressState();
         }
 
+        public void ResetGame()
+        {
+            Paused = true;
+            GridManager.Instance.ReInitialise();
+        }
+        
         public void PauseGame()
         {
-            Paused = !Paused;
-            GridManager.Instance.EnableInteractions(!Paused);
-            MenuManager.Instance.EnableMain(Paused);
-
+            Paused = true;
+            GridManager.Instance.EnableInteractions();
         }
     }
 }

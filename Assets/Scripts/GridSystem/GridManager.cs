@@ -5,7 +5,6 @@ using System.Linq;
 using pure_unity_methods.Abstraction;
 using pure_unity_methods.StateManagement;
 using UnityEngine;
-using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace GridSystem
@@ -26,6 +25,7 @@ namespace GridSystem
         [Header("Colors")]
         [SerializeField] private Color aliveColour = Color.black;
         [SerializeField] private Color deadColour = Color.white;
+        public bool RandomisedColour { get; private set; }
         [Header("Settings")]
         private const int MinimumItems = 3;
         private const int MaximumRows = 60;
@@ -40,6 +40,14 @@ namespace GridSystem
             SetSliders();
             yield return new WaitUntil(() => !generatingGrid);
             GenerateGrid(completeCallback);
+        }
+        
+        public void ReInitialise()
+        {
+            StartCoroutine(Initialise(()=>
+            {
+                EnableInteractions();
+            }));
         }
 
         protected override void OnEnable()
@@ -123,9 +131,10 @@ namespace GridSystem
                 item.EnableHighlight(state);
             }
         }
-        
+
         public void EnableRandomisedColour(bool state = true)
         {
+            RandomisedColour = state;
             foreach (var item in gridItems)
             {
                 item.EnableRandomisedColour(state);

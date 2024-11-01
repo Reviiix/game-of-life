@@ -1,13 +1,14 @@
-﻿using UnityEngine;
+﻿using Menu.Buttons;
+using UnityEngine;
 using UnityEngine.UI;
 
 namespace pure_unity_methods
 {
-    [RequireComponent(typeof(Button))]
+    [RequireComponent(typeof(GameButton))]
     public class OpenURLButton : MonoBehaviour
     {
         [SerializeField] private string url;
-        private Button _button;
+        private Button gameButton;
 
         private void Awake()
         {

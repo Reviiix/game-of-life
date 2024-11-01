@@ -25,7 +25,7 @@ namespace pure_unity_methods.StateManagement
             }
         }
     
-        public void ProgressState()
+        public virtual void ProgressState()
         {
             activeState = stateQueue.Dequeue();
             stateQueue.Enqueue(activeState);
