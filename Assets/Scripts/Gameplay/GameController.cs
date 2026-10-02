@@ -33,7 +33,7 @@ namespace GameOfLife.Gameplay
             settings = gameSettings;
             screenNavigator = navigator;
             cellGrid = new CellGrid(settings.MaximumRows, settings.MaximumColumns);
-            gridView.Initialise(settings.MaximumRows, settings.MaximumColumns);
+            gridView.Initialise(settings);
             countdownDisplay.Initialise(settings);
             randomColoursEnabled = settings.RandomColoursEnabledOnStart;
             SetEvolutionInterval(settings.StartingEvolutionInterval);
@@ -62,15 +62,17 @@ namespace GameOfLife.Gameplay
             ResizeGrid(cellGrid.Rows, cellGrid.Columns);
         }
 
-        /// <summary>Changes the number of rows, which clears the grid.</summary>
+        /// <summary>Changes the number of rows, which stops the simulation and clears the grid.</summary>
         public void SetRows(int rows)
         {
+            ReturnToEditing();
             ResizeGrid(rows, cellGrid.Columns);
         }
 
-        /// <summary>Changes the number of columns, which clears the grid.</summary>
+        /// <summary>Changes the number of columns, which stops the simulation and clears the grid.</summary>
         public void SetColumns(int columns)
         {
+            ReturnToEditing();
             ResizeGrid(cellGrid.Rows, columns);
         }
 

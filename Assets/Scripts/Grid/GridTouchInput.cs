@@ -19,7 +19,7 @@ namespace GameOfLife.Grid
             gridView = GetComponent<GridView>();
         }
 
-        /// <summary>Turns tap handling on or off, for example while the countdown or menu is showing.</summary>
+        /// <summary>Turns tap handling on or off; the game turns it off during the countdown.</summary>
         public void SetAcceptsTaps(bool accepts)
         {
             acceptsTaps = accepts;

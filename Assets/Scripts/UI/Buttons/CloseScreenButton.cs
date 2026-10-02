@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 namespace GameOfLife.UI.Buttons
 {
-    /// <summary>Hides the screen this button belongs to, so dialog prefabs need no extra wiring.</summary>
+    /// <summary>Hides the screen this button belongs to, instantly and without the press animation, so dialog prefabs need no wiring.</summary>
     [RequireComponent(typeof(Button))]
     public sealed class CloseScreenButton : MonoBehaviour
     {

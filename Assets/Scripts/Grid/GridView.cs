@@ -1,19 +1,22 @@
 using GameOfLife.Configuration;
 using Unity.Collections;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace GameOfLife.Grid
 {
-    /// <summary>Draws the whole cell grid as one quad whose texture holds one pixel per cell, with grid lines drawn by the GridCells shader.</summary>
+    /// <summary>Draws the grid as one quad with one texture pixel per cell; line colour comes from GameSettings, not the Graphic colour.</summary>
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class GridView : MaskableGraphic
     {
         private const AdditionalCanvasShaderChannels RequiredShaderChannels = AdditionalCanvasShaderChannels.TexCoord1 | AdditionalCanvasShaderChannels.TexCoord2;
 
-        [Tooltip("Supplies colours, line thickness and the grid size shown in Edit mode.")]
-        [SerializeField] private GameSettings settings;
+        [Tooltip("Only used to preview the grid in Edit mode; at runtime GameInitialiser supplies the settings.")]
+        [FormerlySerializedAs("settings")]
+        [SerializeField] private GameSettings editModePreviewSettings;
 
+        private GameSettings runtimeSettings;
         private Texture2D cellTexture;
         private NativeArray<Color32> cellPixels;
         private Texture2D editModePreviewTexture;
@@ -23,10 +26,13 @@ namespace GameOfLife.Grid
 
         public override Texture mainTexture => cellTexture ? cellTexture : GetEditModePreviewTexture();
 
-        /// <summary>Creates the cell texture at the largest allowed size so later resizes reuse the same memory.</summary>
-        public void Initialise(int maximumRows, int maximumColumns)
+        private GameSettings Settings => runtimeSettings ? runtimeSettings : editModePreviewSettings;
+
+        /// <summary>Creates the cell texture once; Resize sets its dimensions.</summary>
+        public void Initialise(GameSettings settings)
         {
-            cellTexture = new Texture2D(maximumColumns, maximumRows, TextureFormat.RGBA32, false)
+            runtimeSettings = settings;
+            cellTexture = new Texture2D(1, 1, TextureFormat.RGBA32, false)
             {
                 name = "GridCells",
                 filterMode = FilterMode.Point,
@@ -34,6 +40,7 @@ namespace GameOfLife.Grid
             };
             gridLinesVisible = settings.GridLinesVisibleOnStart;
             WarnIfCanvasLacksShaderChannels();
+            SetMaterialDirty();
         }
 
         /// <summary>Resizes the drawn grid and paints every cell with the given colour.</summary>
@@ -96,6 +103,7 @@ namespace GameOfLife.Grid
         protected override void OnPopulateMesh(VertexHelper vertexHelper)
         {
             vertexHelper.Clear();
+            var settings = Settings;
             var drawnRows = cellTexture ? rows : settings ? settings.StartingRows : 1;
             var drawnColumns = cellTexture ? columns : settings ? settings.StartingColumns : 1;
             var showLines = cellTexture ? gridLinesVisible : settings && settings.GridLinesVisibleOnStart;
@@ -161,7 +169,7 @@ namespace GameOfLife.Grid
                 hideFlags = HideFlags.HideAndDontSave,
                 filterMode = FilterMode.Point
             };
-            editModePreviewTexture.SetPixel(0, 0, settings ? settings.DeadCellColour : Color.white);
+            editModePreviewTexture.SetPixel(0, 0, editModePreviewSettings ? editModePreviewSettings.DeadCellColour : Color.white);
             editModePreviewTexture.Apply(false);
             return editModePreviewTexture;
         }
@@ -169,9 +177,9 @@ namespace GameOfLife.Grid
         /// <summary>Logs a warning when the parent canvas does not pass the extra UV channels the grid shader needs.</summary>
         private void WarnIfCanvasLacksShaderChannels()
         {
-            if ((canvas.additionalShaderChannels & RequiredShaderChannels) != RequiredShaderChannels)
+            if ((canvas.rootCanvas.additionalShaderChannels & RequiredShaderChannels) != RequiredShaderChannels)
             {
-                Debug.LogWarning($"{name}: enable TexCoord1 and TexCoord2 in the parent Canvas's Additional Shader Channels or grid lines will not draw.", this);
+                Debug.LogWarning($"{name}: enable TexCoord1 and TexCoord2 in the root Canvas's Additional Shader Channels or grid lines will not draw.", this);
             }
         }
 

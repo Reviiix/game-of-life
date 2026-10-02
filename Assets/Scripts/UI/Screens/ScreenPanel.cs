@@ -11,16 +11,7 @@ namespace GameOfLife.UI.Screens
         private Canvas screenCanvas;
         private GraphicRaycaster screenRaycaster;
 
-        public bool IsVisible => screenCanvas.enabled;
-
         public event Action Hidden;
-
-        /// <summary>Caches the canvas and raycaster that are toggled to show and hide this screen.</summary>
-        private void Awake()
-        {
-            screenCanvas = GetComponent<Canvas>();
-            screenRaycaster = GetComponent<GraphicRaycaster>();
-        }
 
         /// <summary>Makes this screen visible and able to receive taps.</summary>
         public void Show()
@@ -38,11 +29,24 @@ namespace GameOfLife.UI.Screens
         /// <summary>Shows or hides this screen without raising the Hidden event.</summary>
         public void SetVisible(bool visible)
         {
+            CacheComponentsIfNeeded();
             screenCanvas.enabled = visible;
             if (screenRaycaster)
             {
                 screenRaycaster.enabled = visible;
             }
+        }
+
+        /// <summary>Caches the canvas and raycaster on first use, so it also works if the screen was saved inactive.</summary>
+        private void CacheComponentsIfNeeded()
+        {
+            if (screenCanvas)
+            {
+                return;
+            }
+
+            screenCanvas = GetComponent<Canvas>();
+            screenRaycaster = GetComponent<GraphicRaycaster>();
         }
     }
 }

@@ -12,6 +12,7 @@ namespace GameOfLife.UI.Buttons
     {
         private Transform animatedTransform;
         private Coroutine pressRoutine;
+        private GameSettings settings;
 
         /// <summary>Runs once the press animation has finished.</summary>
         protected abstract void OnPressed();
@@ -48,7 +49,11 @@ namespace GameOfLife.UI.Buttons
         /// <summary>Scales the button along the press curve from GameSettings, then calls OnPressed.</summary>
         private IEnumerator PlayPressAnimationThenAct()
         {
-            var settings = ServiceLocator.Get<GameSettings>();
+            if (!settings)
+            {
+                settings = ServiceLocator.Get<GameSettings>();
+            }
+
             var duration = settings.ButtonPressDuration;
             var scaleCurve = settings.ButtonPressScale;
             for (var elapsed = 0f; elapsed < duration; elapsed += Time.unscaledDeltaTime)

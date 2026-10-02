@@ -31,12 +31,12 @@ namespace GameOfLife.Gameplay
             Clear();
         }
 
-        /// <summary>Counts down one label per second; a one-second countdown just shows GO!.</summary>
+        /// <summary>Counts down one label per second; a one-second countdown just shows GO! in the default colour.</summary>
         public IEnumerator PlayCountdown(int seconds, bool useRandomColours)
         {
             if (seconds == 1)
             {
-                ShowLabel(SingleSecondLabel, false);
+                ShowLabel(SingleSecondLabel, useRandomColour: false);
                 yield return oneSecond;
                 Clear();
                 yield break;

@@ -76,6 +76,7 @@ Shader "GameOfLife/UI/GridCells"
 
             sampler2D _MainTex;
             float4 _ClipRect;
+            float _UIVertexColorAlwaysGammaSpace;
 
             FragmentInput vert(VertexInput input)
             {
@@ -84,6 +85,10 @@ Shader "GameOfLife/UI/GridCells"
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                 output.worldPosition = input.vertex;
                 output.position = UnityObjectToClipPos(input.vertex);
+                if (_UIVertexColorAlwaysGammaSpace && !IsGammaSpace())
+                {
+                    input.lineColour.rgb = UIGammaToLinear(input.lineColour.rgb);
+                }
                 output.lineColour = input.lineColour;
                 output.cellUv = input.cellUv;
                 output.gridSize = input.gridSize;
@@ -97,7 +102,7 @@ Shader "GameOfLife/UI/GridCells"
                 float2 positionInsideCell = frac(positionInCells);
                 float2 cellCoordinate = floor(positionInCells);
 
-                // Lines sit along the right and bottom edge of every cell except the last column and row.
+                // Lines sit inside the right and bottom edge of every cell except the last column and row, matching the original outline look.
                 float2 isNotLastCell = step(cellCoordinate, input.gridSize - 1.5);
                 float2 isOnLine = step(1.0 - input.lineThickness, positionInsideCell) * step(0.0001, input.lineThickness) * isNotLastCell;
 
