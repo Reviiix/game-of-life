@@ -8,7 +8,7 @@ namespace Menu.Buttons
     {
         [SerializeField] private bool open;
 
-        protected override void OnClick()
+        protected override void OnClick(Action callBack)
         {
             StartCoroutine(AnimateButton(() =>
             {

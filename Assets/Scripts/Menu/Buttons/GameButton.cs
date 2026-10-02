@@ -14,12 +14,12 @@ namespace Menu.Buttons
 
         protected virtual void Start()
         {
-            GetComponent<Button>().onClick.AddListener(OnClick);
+            GetComponent<Button>().onClick.AddListener(() => OnClick(() => { }));
             onClickAnimation = GetComponent<Animator>();
             onClickAnimation.enabled = false;
         }
     
-        protected virtual void OnClick()
+        protected virtual void OnClick(Action callBack)
         {
             #if UNITY_EDITOR
             Debug.LogWarning("Override this method");
@@ -28,9 +28,12 @@ namespace Menu.Buttons
 
         protected IEnumerator AnimateButton(Action callBack)
         {
+            // The animator is left disabled while idle; disabling it again afterwards resets it to its default state.
+            onClickAnimation.enabled = true;
             onClickAnimation.SetTrigger(Play);
-            var v = onClickAnimation.GetCurrentAnimatorClipInfo(0).Length;
-            yield return new WaitForSeconds(onClickAnimation.GetCurrentAnimatorClipInfo(0).Length);
+            yield return null;
+            yield return new WaitUntil(() => !onClickAnimation.IsInTransition(0) && onClickAnimation.GetCurrentAnimatorStateInfo(0).normalizedTime >= 1);
+            onClickAnimation.enabled = false;
 
             callBack();
         }
