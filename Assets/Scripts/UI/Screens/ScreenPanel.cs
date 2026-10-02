@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,6 +12,8 @@ namespace GameOfLife.UI.Screens
         private GraphicRaycaster screenRaycaster;
 
         public bool IsVisible => screenCanvas.enabled;
+
+        public event Action Hidden;
 
         /// <summary>Caches the canvas and raycaster that are toggled to show and hide this screen.</summary>
         private void Awake()
@@ -29,9 +32,10 @@ namespace GameOfLife.UI.Screens
         public void Hide()
         {
             SetVisible(false);
+            Hidden?.Invoke();
         }
 
-        /// <summary>Shows or hides this screen.</summary>
+        /// <summary>Shows or hides this screen without raising the Hidden event.</summary>
         public void SetVisible(bool visible)
         {
             screenCanvas.enabled = visible;

@@ -10,15 +10,31 @@ namespace GameOfLife.UI.Screens
         [SerializeField] private ScreenPanel invalidGameDialog;
 
         public ScreenPanel MainMenu => mainMenu;
-        public ScreenPanel SettingsMenu => settingsMenu;
         public ScreenPanel InvalidGameDialog => invalidGameDialog;
 
-        /// <summary>Shows the main menu and hides every dialog, whatever state the scene was saved in.</summary>
+        /// <summary>Shows the main menu, hides every dialog whatever state the scene was saved in, and returns to the menu when settings close.</summary>
         public void Initialise()
         {
-            mainMenu.Show();
-            settingsMenu.Hide();
-            invalidGameDialog.Hide();
+            mainMenu.SetVisible(true);
+            settingsMenu.SetVisible(false);
+            invalidGameDialog.SetVisible(false);
+            settingsMenu.Hidden += mainMenu.Show;
+        }
+
+        /// <summary>Replaces the main menu with the settings menu so the two never overlap.</summary>
+        public void OpenSettingsMenu()
+        {
+            mainMenu.SetVisible(false);
+            settingsMenu.Show();
+        }
+
+        /// <summary>Stops listening to the settings menu when destroyed.</summary>
+        private void OnDestroy()
+        {
+            if (settingsMenu)
+            {
+                settingsMenu.Hidden -= mainMenu.Show;
+            }
         }
     }
 }
