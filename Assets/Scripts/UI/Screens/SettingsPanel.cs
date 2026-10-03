@@ -1,57 +1,109 @@
+using GameOfLife.Audio;
 using GameOfLife.Configuration;
 using GameOfLife.Gameplay;
+using GameOfLife.Opponents;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace GameOfLife.UI.Screens
 {
-    /// <summary>Connects the settings sliders and toggles to the game, starting them at the values in GameSettings.</summary>
+    /// <summary>Connects the settings rows to GameOptions, starting each control at its GameSettings value.</summary>
     public sealed class SettingsPanel : MonoBehaviour
     {
-        [SerializeField] private Slider rowsSlider;
-        [SerializeField] private Slider columnsSlider;
-        [SerializeField] private Slider evolutionIntervalSlider;
+        [Header("Board")]
+        [SerializeField] private SliderSetting rowsSetting;
+        [SerializeField] private SliderSetting columnsSetting;
+        [SerializeField] private SliderSetting evolutionIntervalSetting;
         [SerializeField] private Toggle randomColoursToggle;
         [SerializeField] private Toggle gridLinesToggle;
 
-        private GameController gameController;
+        [Header("Audio")]
+        [SerializeField] private Toggle musicToggle;
+        [SerializeField] private Toggle soundEffectsToggle;
+
+        [Header("Versus")]
+        [SerializeField] private SliderSetting setupSquaresSetting;
+        [SerializeField] private SliderSetting matchSquaresSetting;
+        [SerializeField] private SliderSetting matchTimeSetting;
+        [SerializeField] private Toggle hardOpponentToggle;
+
+        private GameOptions options;
+        private AudioManager audioManager;
 
         /// <summary>Sets every control's range and starting value, then listens for changes.</summary>
-        public void Initialise(GameSettings settings, GameController controller)
+        public void Initialise(GameSettings settings, GameOptions gameOptions, AudioManager audio)
         {
-            gameController = controller;
-            ConfigureSlider(rowsSlider, settings.MinimumGridSize, settings.MaximumRows, settings.StartingRows, true);
-            ConfigureSlider(columnsSlider, settings.MinimumGridSize, settings.MaximumColumns, settings.StartingColumns, true);
-            ConfigureSlider(evolutionIntervalSlider, settings.MinimumEvolutionInterval, settings.MaximumEvolutionInterval, settings.StartingEvolutionInterval, false);
-            randomColoursToggle.SetIsOnWithoutNotify(settings.RandomColoursEnabledOnStart);
-            gridLinesToggle.SetIsOnWithoutNotify(settings.GridLinesVisibleOnStart);
+            options = gameOptions;
+            audioManager = audio;
+            rowsSetting.Configure(settings.MinimumGridSize, settings.MaximumRows, options.Rows, true);
+            columnsSetting.Configure(settings.MinimumGridSize, settings.MaximumColumns, options.Columns, true);
+            evolutionIntervalSetting.Configure(settings.MinimumEvolutionInterval, settings.MaximumEvolutionInterval, options.EvolutionInterval, false);
+            setupSquaresSetting.Configure(settings.MinimumSetupSquares, settings.MaximumSetupSquares, options.VersusSetupSquares, true);
+            matchSquaresSetting.Configure(settings.MinimumMatchSquares, settings.MaximumMatchSquares, options.VersusMatchSquares, true);
+            matchTimeSetting.Configure(settings.MinimumMatchSeconds, settings.MaximumMatchSeconds, options.VersusMatchSeconds, true);
+            randomColoursToggle.SetIsOnWithoutNotify(options.RandomColoursEnabled);
+            gridLinesToggle.SetIsOnWithoutNotify(options.GridLinesVisible);
+            hardOpponentToggle.SetIsOnWithoutNotify(options.OpponentDifficulty == OpponentDifficulty.Hard);
+            musicToggle.SetIsOnWithoutNotify(options.MusicEnabled);
+            soundEffectsToggle.SetIsOnWithoutNotify(options.SoundEffectsEnabled);
 
-            rowsSlider.onValueChanged.AddListener(OnRowsChanged);
-            columnsSlider.onValueChanged.AddListener(OnColumnsChanged);
-            evolutionIntervalSlider.onValueChanged.AddListener(gameController.SetEvolutionInterval);
-            randomColoursToggle.onValueChanged.AddListener(gameController.SetRandomColoursEnabled);
-            gridLinesToggle.onValueChanged.AddListener(gameController.SetGridLinesVisible);
+            rowsSetting.AddValueChangedListener(OnRowsChanged);
+            columnsSetting.AddValueChangedListener(OnColumnsChanged);
+            evolutionIntervalSetting.AddValueChangedListener(options.SetEvolutionInterval);
+            setupSquaresSetting.AddValueChangedListener(OnSetupSquaresChanged);
+            matchSquaresSetting.AddValueChangedListener(OnMatchSquaresChanged);
+            matchTimeSetting.AddValueChangedListener(OnMatchTimeChanged);
+            randomColoursToggle.onValueChanged.AddListener(options.SetRandomColoursEnabled);
+            gridLinesToggle.onValueChanged.AddListener(options.SetGridLinesVisible);
+            hardOpponentToggle.onValueChanged.AddListener(OnHardOpponentChanged);
+            musicToggle.onValueChanged.AddListener(options.SetMusicEnabled);
+            soundEffectsToggle.onValueChanged.AddListener(options.SetSoundEffectsEnabled);
+            foreach (var toggle in new[] { randomColoursToggle, gridLinesToggle, hardOpponentToggle, musicToggle, soundEffectsToggle })
+            {
+                toggle.onValueChanged.AddListener(PlayToggleClick);
+            }
         }
 
-        /// <summary>Applies a slider's range and value without triggering its change event.</summary>
-        private static void ConfigureSlider(Slider slider, float minimum, float maximum, float startingValue, bool wholeNumbers)
+        /// <summary>Clicks when any toggle changes; turning sound effects back on clicks too, as confirmation.</summary>
+        private void PlayToggleClick(bool isOn)
         {
-            slider.wholeNumbers = wholeNumbers;
-            slider.minValue = minimum;
-            slider.maxValue = maximum;
-            slider.SetValueWithoutNotify(startingValue);
+            audioManager.Play(SoundEffect.ButtonPress);
         }
 
-        /// <summary>Passes the new row count to the game.</summary>
+        /// <summary>Passes the new row count on.</summary>
         private void OnRowsChanged(float rows)
         {
-            gameController.SetRows((int)rows);
+            options.SetRows((int)rows);
         }
 
-        /// <summary>Passes the new column count to the game.</summary>
+        /// <summary>Passes the new column count on.</summary>
         private void OnColumnsChanged(float columns)
         {
-            gameController.SetColumns((int)columns);
+            options.SetColumns((int)columns);
+        }
+
+        /// <summary>Passes the new setup square allowance on.</summary>
+        private void OnSetupSquaresChanged(float squares)
+        {
+            options.SetVersusSetupSquares((int)squares);
+        }
+
+        /// <summary>Passes the new in-match square allowance on.</summary>
+        private void OnMatchSquaresChanged(float squares)
+        {
+            options.SetVersusMatchSquares((int)squares);
+        }
+
+        /// <summary>Passes the new match length on.</summary>
+        private void OnMatchTimeChanged(float seconds)
+        {
+            options.SetVersusMatchSeconds((int)seconds);
+        }
+
+        /// <summary>Switches the app between Easy and Hard.</summary>
+        private void OnHardOpponentChanged(bool hard)
+        {
+            options.SetOpponentDifficulty(hard ? OpponentDifficulty.Hard : OpponentDifficulty.Easy);
         }
     }
 }

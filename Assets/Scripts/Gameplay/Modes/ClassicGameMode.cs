@@ -1,127 +1,103 @@
-using System;
 using System.Collections;
-using GameOfLife.Configuration;
+using GameOfLife.Audio;
 using GameOfLife.Core;
-using GameOfLife.Grid;
 using GameOfLife.Simulation;
-using GameOfLife.UI.Screens;
 using UnityEngine;
 
-namespace GameOfLife.Gameplay
+namespace GameOfLife.Gameplay.Modes
 {
-    /// <summary>Runs the core loop: editing cells, the start countdown, timed generations, pausing and resetting.</summary>
-    public sealed class GameController : MonoBehaviour
+    /// <summary>The original game: tap cells, press play, and watch Conway's rules run until paused or reset.</summary>
+    public sealed class ClassicGameMode : GameModeBase
     {
-        [SerializeField] private GridView gridView;
-        [SerializeField] private GridTouchInput gridTouchInput;
-        [SerializeField] private CountdownDisplay countdownDisplay;
-
-        private GameSettings settings;
-        private ScreenNavigator screenNavigator;
-        private CellGrid cellGrid;
-        private WaitForSeconds delayBetweenGenerations;
         private Coroutine activeRoutine;
-        private bool randomColoursEnabled;
+        private ClassicGamePhase phase;
 
-        public GamePhase Phase { get; private set; }
+        public override GameModeType ModeType => GameModeType.Classic;
 
-        public event Action<GamePhase> PhaseChanged;
-
-        /// <summary>Allocates the simulation at its largest size, applies the starting settings and shows an empty grid.</summary>
-        public void Initialise(GameSettings gameSettings, ScreenNavigator navigator)
+        /// <summary>Starts with an empty board in the editing phase.</summary>
+        public override void Enter()
         {
-            settings = gameSettings;
-            screenNavigator = navigator;
-            cellGrid = new CellGrid(settings.MaximumRows, settings.MaximumColumns);
-            gridView.Initialise(settings);
-            countdownDisplay.Initialise(settings);
-            randomColoursEnabled = settings.RandomColoursEnabledOnStart;
-            SetEvolutionInterval(settings.StartingEvolutionInterval);
-            ResizeGrid(settings.StartingRows, settings.StartingColumns);
-            gridTouchInput.CellTapped += ToggleCell;
-            SetPhase(GamePhase.Editing);
+            ResetBoardToChosenSize();
+            SetPhase(ClassicGamePhase.Editing);
         }
 
-        /// <summary>Starts the countdown when editing; otherwise stops the countdown or simulation and returns to editing.</summary>
-        public void TogglePlayPause()
+        /// <summary>Stops any countdown or simulation.</summary>
+        public override void Exit()
         {
-            if (Phase == GamePhase.Editing)
+            ReturnToEditing();
+        }
+
+        /// <summary>Flips the tapped cell, except during the countdown.</summary>
+        public override void OnCellTapped(int cellIndex)
+        {
+            if (phase == ClassicGamePhase.CountingDown)
             {
-                activeRoutine = StartCoroutine(CountDownThenRunSimulation());
+                return;
+            }
+
+            Context.Grid.ToggleCell(cellIndex);
+            RepaintChangedCells();
+            if (Context.Grid.IsAlive(cellIndex))
+            {
+                PlayPlacementSound(SoundEffect.CellPlaced, cellIndex);
             }
             else
             {
+                Context.Audio.Play(SoundEffect.CellRemoved);
+            }
+        }
+
+        /// <summary>Starts the countdown when editing with at least one living cell, warns straight away if the board is empty, and otherwise stops and returns to editing.</summary>
+        public override void TogglePlayPause()
+        {
+            if (phase != ClassicGamePhase.Editing)
+            {
                 ReturnToEditing();
+            }
+            else if (!Context.Grid.HasAnyLivingCell())
+            {
+                Context.Audio.Play(SoundEffect.Invalid);
+                Context.Screens.InvalidGameDialog.Show();
+            }
+            else
+            {
+                activeRoutine = StartCoroutine(CountDownThenRunSimulation());
             }
         }
 
         /// <summary>Stops the simulation and kills every cell.</summary>
-        public void ResetGame()
+        public override void Restart()
         {
             ReturnToEditing();
-            ResizeGrid(cellGrid.Rows, cellGrid.Columns);
+            ResetBoardToChosenSize();
         }
 
-        /// <summary>Changes the number of rows, which stops the simulation and clears the grid.</summary>
-        public void SetRows(int rows)
+        /// <summary>Draws living cells in the alive colour, or a fresh random colour when random colours are on.</summary>
+        protected override Color32 GetCellColour(int cellIndex)
         {
-            ReturnToEditing();
-            ResizeGrid(rows, cellGrid.Columns);
-        }
-
-        /// <summary>Changes the number of columns, which stops the simulation and clears the grid.</summary>
-        public void SetColumns(int columns)
-        {
-            ReturnToEditing();
-            ResizeGrid(cellGrid.Rows, columns);
-        }
-
-        /// <summary>Sets how many seconds pass between generations.</summary>
-        public void SetEvolutionInterval(float seconds)
-        {
-            delayBetweenGenerations = new WaitForSeconds(seconds);
-        }
-
-        /// <summary>Turns random colours on or off for cells that come alive from now on.</summary>
-        public void SetRandomColoursEnabled(bool enabled)
-        {
-            randomColoursEnabled = enabled;
-        }
-
-        /// <summary>Shows or hides the lines between cells.</summary>
-        public void SetGridLinesVisible(bool visible)
-        {
-            gridView.SetGridLinesVisible(visible);
-        }
-
-        /// <summary>Stops listening for taps when this object is destroyed.</summary>
-        private void OnDestroy()
-        {
-            if (gridTouchInput)
+            if (!Context.Grid.IsAlive(cellIndex))
             {
-                gridTouchInput.CellTapped -= ToggleCell;
+                return Context.Settings.DeadCellColour;
             }
+
+            return Context.Options.RandomColoursEnabled ? RandomColour.CreateOpaque() : Context.Settings.AliveCellColour;
         }
 
-        /// <summary>Plays the countdown, then advances one generation per interval until paused; shows a warning if no cells are alive.</summary>
+        /// <summary>Plays the countdown, then advances one generation per interval until paused.</summary>
         private IEnumerator CountDownThenRunSimulation()
         {
-            SetPhase(GamePhase.CountingDown);
-            yield return countdownDisplay.PlayCountdown(settings.CountdownSeconds, randomColoursEnabled);
-
-            if (!cellGrid.HasAnyLivingCell())
-            {
-                activeRoutine = null;
-                SetPhase(GamePhase.Editing);
-                screenNavigator.InvalidGameDialog.Show();
-                yield break;
-            }
-
-            SetPhase(GamePhase.Running);
+            SetPhase(ClassicGamePhase.CountingDown);
+            yield return Context.Countdown.PlayCountdown(Context.Options.RandomColoursEnabled);
+            SetPhase(ClassicGamePhase.Running);
             while (true)
             {
-                AdvanceGeneration();
-                yield return delayBetweenGenerations;
+                Context.Grid.AdvanceGeneration();
+                if (RepaintChangedCells())
+                {
+                    Context.Audio.Play(SoundEffect.GenerationTick);
+                }
+
+                yield return GetDelayBetweenGenerations();
             }
         }
 
@@ -134,56 +110,15 @@ namespace GameOfLife.Gameplay
                 activeRoutine = null;
             }
 
-            countdownDisplay.Clear();
-            SetPhase(GamePhase.Editing);
+            Context.Countdown.Clear();
+            SetPhase(ClassicGamePhase.Editing);
         }
 
-        /// <summary>Resizes the simulation and the view together, leaving every cell dead.</summary>
-        private void ResizeGrid(int rows, int columns)
+        /// <summary>Updates the phase and reports whether the simulation is active.</summary>
+        private void SetPhase(ClassicGamePhase newPhase)
         {
-            cellGrid.Resize(rows, columns);
-            gridView.Resize(rows, columns, settings.DeadCellColour);
-        }
-
-        /// <summary>Flips a tapped cell and redraws it.</summary>
-        private void ToggleCell(int cellIndex)
-        {
-            cellGrid.ToggleCell(cellIndex);
-            gridView.SetCellColour(cellIndex, GetCellColour(cellGrid.IsAlive(cellIndex)));
-            gridView.ApplyCellColours();
-        }
-
-        /// <summary>Advances the simulation one step and redraws only the cells that changed.</summary>
-        private void AdvanceGeneration()
-        {
-            cellGrid.AdvanceGeneration();
-            var changedCellIndices = cellGrid.ChangedCellIndices;
-            for (var changeIndex = 0; changeIndex < changedCellIndices.Count; changeIndex++)
-            {
-                var cellIndex = changedCellIndices[changeIndex];
-                gridView.SetCellColour(cellIndex, GetCellColour(cellGrid.IsAlive(cellIndex)));
-            }
-
-            gridView.ApplyCellColours();
-        }
-
-        /// <summary>Returns the colour for a cell; living cells get a fresh random colour when random colours are on.</summary>
-        private Color32 GetCellColour(bool isAlive)
-        {
-            if (!isAlive)
-            {
-                return settings.DeadCellColour;
-            }
-
-            return randomColoursEnabled ? RandomColour.CreateOpaque() : settings.AliveCellColour;
-        }
-
-        /// <summary>Updates the phase, allows taps on the grid except during the countdown, and notifies listeners.</summary>
-        private void SetPhase(GamePhase phase)
-        {
-            Phase = phase;
-            gridTouchInput.SetAcceptsTaps(phase != GamePhase.CountingDown);
-            PhaseChanged?.Invoke(phase);
+            phase = newPhase;
+            SetSimulationActive(newPhase != ClassicGamePhase.Editing);
         }
     }
 }

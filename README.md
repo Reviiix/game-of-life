@@ -1,6 +1,9 @@
 # Conway's Game of Life
 
-A portrait mobile (Android and iOS) version of Conway's Game of Life, built with Unity 6000.3 and URP. Tap cells to bring them to life, press play, and watch them evolve.
+A portrait mobile (Android and iOS) version of Conway's Game of Life, built with Unity 6000.3 and URP. There are two modes on the main menu:
+
+- **Classic:** tap cells to bring them to life, press play, and watch them evolve.
+- **Versus:** you (blue) against the app (red). Take turns placing squares on your own half, then a timed match runs. Newborn cells take their parents' majority colour. When clusters of different colours touch, the bigger cluster converts the smaller one. Whoever has the most squares when time runs out wins.
 
 ## Getting started
 
@@ -14,12 +17,14 @@ Most tuning needs no code: select `Assets/Configuration/GameSettings.asset` and 
 
 | Folder | Contents |
 |---|---|
-| `Art/` | Fonts, sprites (`Sprites/Icons.png`), the grid shader and its material |
-| `Configuration/` | `GameSettings.asset`, the single source of tunable values |
+| `Art/` | Fonts, sprites (`Sprites/Icons.png`), audio (`Audio/SoundEffects`, `Audio/Music`), the grid shader and its material |
+| `Configuration/` | `GameSettings.asset` (tunable values) and `SoundLibrary.asset` (clips, volumes and repeat limits) |
 | `Prefabs/UI/` | Buttons, dialogs and settings rows (see [Prefabs](#prefabs)) |
 | `Rendering/` | URP pipeline, renderer and volume assets |
 | `Scenes/` | `Game.unity` |
 | `Scripts/` | All game code, compiled into the `GameOfLife` assembly |
+| `../Tools/Audio/` | `generate_sounds.py`, which synthesises every sound and the music loop. Edit it and run `python3 Tools/Audio/generate_sounds.py` to regenerate |
+| `Tests/EditMode/` | NUnit tests for the pure C# engine (Window → General → Test Runner) |
 | `Libraries/pure-unity-methods/` | Shared utility library. **The game does not use it.** It is Editor-only and opt-in, ready to be extracted |
 | `TextMesh Pro/` | TMP resources and shaders |
 
@@ -29,26 +34,35 @@ Most tuning needs no code: select `Assets/Configuration/GameSettings.asset` and 
 |---|---|
 | `Core` | `GameInitialiser` (entry point), `ServiceLocator`, `RandomColour` |
 | `Configuration` | `GameSettings` ScriptableObject |
-| `Simulation` | `CellGrid`, pure C# Conway rules with no Unity dependencies |
+| `Simulation` | `CellGrid` (two-colour Conway rules), `CellOwner`, `ClusterAbsorber`. Pure C#, no Unity |
+| `Opponents` | The app's placement AI: `RandomOpponentStrategy` (Easy), `StrategicOpponentStrategy` (Hard). Pure C# |
+| `Versus` | `VersusMatch`: the rules of one match (turns, pools, regions, early end, outcome). Pure C# |
 | `Grid` | `GridView` draws the grid; `GridTouchInput` turns taps into cell indices |
-| `Gameplay` | `GameController` (the core loop), `CountdownDisplay`, `GamePhase` |
-| `UI.Screens` | `ScreenPanel`, `ScreenNavigator`, `SettingsPanel` |
+| `Gameplay` | `GameModeDirector` (keeps one mode active), `GameOptions` (the player's Settings choices), `CountdownDisplay` |
+| `Gameplay.Modes` | `GameModeBase`, `ClassicGameMode`, `VersusGameMode` (timing, turns, pause, result) |
+| `UI.Versus` | `VersusHud` (score, timer, status, setup shading), `MatchResultPanel` |
+| `UI.Screens` | `ScreenPanel`, `ScreenNavigator`, `SettingsPanel`, `SliderSetting` |
 | `UI.Buttons` | `AnimatedButton` and one small subclass per button action |
 | `UI` | `SafeAreaFitter`, `VersionLabel` |
 | `Effects` | `ScreenFader` (start-up fade from black) |
+| `Purchasing` | `PurchaseManager` (Unity IAP v5 store connection, buying and restoring the ad pass), `AdPassOwnership` (saved entitlement) |
+| `UI.Store` | `AdPassButton`, `RestorePurchasesButton`, `PurchaseFeedback` |
+| `Audio` | `AudioManager` (music plus a pool of reused effect sources), `SoundLibrary`, `SoundEffect`, `SoundEffectSettings` |
 
 ## Scene hierarchy
 
 ```
-Systems              GameInitialiser, GameController, ScreenNavigator, EventSystem, MainCamera
-GameScreen           Canvas 0: Grid (full screen) + SafeArea/ButtonBar + SafeArea/CountdownLabel
-MainMenuScreen       Canvas 1: title, Play / Settings buttons, version label
-SettingsScreen       Canvas 3: SettingsDialog prefab variant
+Systems              GameInitialiser, GameModeDirector (ClassicMode, VersusMode), ScreenNavigator, EventSystem, MainCamera
+GameScreen           Canvas 0: Grid + OpponentHalfShade (full screen), SafeArea/ButtonBar, CountdownLabel, VersusHud
+MainMenuScreen       Canvas 1: title, Classic / Versus / Settings buttons, version label
+SettingsScreen       Canvas 3: SettingsDialog prefab variant (scrolls)
 InvalidGameScreen    Canvas 4: InvalidGameDialog prefab variant
+MatchResultScreen    Canvas 5: MatchResultDialog prefab variant
+MessageScreen        Canvas 6: MessageDialog prefab variant (purchase results)
 ScreenFade           Canvas 100: black overlay that fades out at start-up
 ```
 
-Controls and text sit under a `SafeArea` object so they avoid notches. Full-screen backgrounds and the grid sit outside it.
+Controls and text sit under a `SafeArea` object so they avoid notches. Full-screen backgrounds and the Classic grid sit outside it. In Versus the grid moves into `SafeArea/VersusBoardArea`, between the HUD and the button bar, so the player can reach every cell. It moves back when Versus exits. The camera clears to white so the bars look the same in both layouts.
 
 ## How it works
 
@@ -56,8 +70,14 @@ Controls and text sit under a `SafeArea` object so they avoid notches. Full-scre
 
 `GameInitialiser` is the only entry point. It runs before every other script (`DefaultExecutionOrder(-1000)`):
 
-1. **Awake:** sets the target frame rate and registers the services: `GameSettings`, `GameController` and `ScreenNavigator`.
-2. **Start:** initialises the systems in dependency order: screens, game controller (allocates the simulation and grid texture at maximum size), settings panel, play/pause button.
+1. **Awake:** sets the target frame rate, creates `GameOptions`, and registers the services: `GameSettings`, `GameModeDirector` and `ScreenNavigator`. `GameOptions` is passed to the systems that need it through `Initialise`.
+2. **Start:** initialises the systems in dependency order:
+   - screens
+   - the game mode director (allocates the board and grid texture, and builds both modes and both AI opponents)
+   - the settings panel
+   - the play/pause button
+
+   Classic mode starts behind the main menu.
 3. Waits one frame so load hitches don't eat into the fade, then fades in from black.
 
 To add a system, give it an `Initialise(...)` method and call it from `GameInitialiser.InitialiseSystems()` in the right order. Avoid doing setup work in its own `Start()`.
@@ -67,17 +87,68 @@ To add a system, give it an `Initialise(...)` method and call it from `GameIniti
 `ServiceLocator` holds exactly one instance per type. Registering a type twice logs an error, and getting a type that isn't registered throws a clear exception.
 
 - **Register** in `GameInitialiser.RegisterServices()`.
-- **Use** with `ServiceLocator.Get<GameController>()`. This is how prefab buttons reach scene systems without scene references.
+- **Use** with `ServiceLocator.Get<GameModeDirector>()`. This is how prefab buttons reach scene systems without scene references.
 - **Which style to use:** anything that subscribes to events or needs set-up at start-up gets its dependencies through `Initialise(...)`, called by `GameInitialiser`. Fire-and-forget actions, such as a button press, call `ServiceLocator.Get` when they run.
 
-### Core loop (`GameController`)
+### Game modes (`GameModeDirector`)
 
-`Editing` → (play) → `CountingDown` → `Running` → (pause) → `Editing`
+The director owns the single `CellGrid` and keeps exactly one `GameModeBase` active (its `modes` list in the Inspector). Taps, the play/pause and reset buttons, and option changes all go to the active mode.
+- **The mode buttons:** pressing CLASSIC or VERSUS on the menu resumes that mode if it's already active, or starts it fresh.
+- **The main menu:** opening it pauses a Versus match. Classic keeps running under it. Play/pause and reset presses that finish after the menu has opened are ignored.
+- **Colours:** each mode chooses its own cell colours through `GetCellColour`.
+- **Repainting:** `RepaintChangedCells()` redraws only the cells in `CellGrid.ChangedCellIndices`. That list accumulates until it's cleared.
 
+**Classic** (`ClassicGameMode`): `Editing` → (play) → `CountingDown` → `Running` → (pause) → `Editing`.
 - Taps toggle cells in every phase except `CountingDown`.
-- If no cell is alive when the countdown ends, the "populate at least one cell" dialog opens.
-- Generations run in a coroutine: advance, wait `delayBetweenGenerations`, repeat. There is no `Update()` anywhere in the game.
-- `CellGrid` works out the whole next generation before applying it (true Conway rules), and reports only the cells that changed.
+- Pressing play on an empty board opens the "populate at least one cell" dialog straight away, without a countdown.
+
+**Versus** (`VersusGameMode`, with the rules in `VersusMatch`). Its phases (`VersusGamePhase`) are `Setup` → `CountingDown` → `Running` ⇄ `Paused` → `Finished`, plus `WaitingToStart` if setup finishes while the menu is open.
+- **Setup:** you and the app take turns placing on your own halves (yours is the top). The app's half is shaded.
+- **Setup changes:** changing the square pools or match length while still in setup restarts setup. Difficulty applies from the app's next move.
+- **Match:** a countdown, then one match clock coroutine counts the time down and triggers generations and the app's moves. Remaining times are kept exactly across pauses.
+- **App moves:** the app spends its in-match squares at jittered intervals. Each one must touch a living cell, so a square never appears out of nowhere. `VersusMatch.CanPlace` enforces this whatever strategy is used. Your own squares can go on any empty cell. Its move search runs on a worker thread against a board snapshot (`OpponentMoveSearch`), so Hard never stalls a frame.
+- **After the match:** Play, or choosing VERSUS from the menu, starts a new match.
+- **Absorption** (`ClusterAbsorber`) is resolved after every placement and every generation.
+- **Early end:** the match ends early if a side has no squares left on the board and none left to place.
+
+There is no `Update()` anywhere in the game. The only per-frame work is the Versus match clock, which runs only while a match is running.
+
+### Audio (`AudioManager`)
+
+`AudioManager` is a registered service, initialised first by `GameInitialiser`.
+- **Music:** one looping source streams `puzzle_loop` and fades in. The MUSIC toggle pauses and resumes it.
+- **Effects:** play through a small pool of AudioSources (`SoundLibrary.simultaneousSoundEffects`), reused round-robin, so overlapping sounds never allocate.
+- **Saved settings:** the MUSIC and SOUND EFFECTS toggles are saved on the device with `PlayerPrefs`. Other Settings last for the session.
+- **Repeat limits:** each effect's `minimumSecondsBetweenPlays` stops rapid events, such as fast generations or slider drags, piling up.
+- **Where sounds are triggered:**
+  - Buttons click in `AnimatedButton` and `CloseScreenButton`; toggles click in `SettingsPanel`; sliders tick in `SliderSetting`.
+  - Placed cells call `PlayNoteForRow`, which retunes `cell_placed` to a C-major pentatonic note rising towards the top row.
+  - Generations tick only when a cell changed.
+  - Absorptions sound bright when you gain cells and lower when the app does (`VersusMatch.LastAbsorbingSide`).
+- **Adding a sound:** add a `SoundEffect` value, give it an entry in `SoundLibrary.asset`, and call `Play`.
+- **Import settings:** effects are mono 22.05 kHz, Decompress On Load. Music is streaming with Load In Background. Both use Vorbis on every platform, because Unity 6000.3 offers no AAC option for iOS audio.
+
+### Ad pass (`PurchaseManager` + `AdPassOwnership`)
+
+The £0.99 ad pass is a **non-consumable** product. Its ID, `ad_pass`, is set in `GameSettings`.
+- **Start-up:** `PurchaseManager` connects through `UnityIAPServices.StoreController()`, then fetches the product and any existing purchases. Owning the pass on record re-grants it, for example after a reinstall.
+- **Buying:** NO ADS on the main menu calls `BuyAdPass`. When the store reports the purchase as pending, `AdPassOwnership.Grant()` saves it with `PlayerPrefs`, and only then is `ConfirmPurchase` called. That way a purchase is never confirmed without being saved, and the store re-delivers any unconfirmed purchase on the next launch.
+- **Other outcomes:**
+  - Deferred purchases (Ask to Buy) grant nothing until approved.
+  - A cancelled purchase shows no message.
+  - "Already owned" is treated as a restore: purchases are fetched and the player is thanked once the pass is confirmed.
+  - An approved Ask to Buy is thanked when it arrives.
+- **Connection:** the store retries lost connections with back-off, and reconnects when the player returns to the app. NO ADS is disabled while disconnected.
+  - Apple refunds revoke it.
+- **Restore:** RESTORE PURCHASES appears only on iOS, where Apple requires it. Android re-grants the pass automatically at every launch, and the Editor's fake store cannot restore.
+- **UI:** the button shows the store's localised price, greys out until the store is ready or while a purchase is in progress, and disappears once the pass is owned. `PurchaseFeedback` reports each result in the message dialog.
+- **Ads:** whatever shows ads must check `ServiceLocator.Get<AdPassOwnership>().IsOwned` and listen to `OwnershipChanged`.
+
+**Before release:**
+- Create a non-consumable product with ID `ad_pass` at £0.99 in both App Store Connect and Google Play Console.
+- Test with sandbox / licence-tester accounts.
+- Optionally add Google Play receipt validation: generate the tangle with **Services > In-App Purchasing > Receipt Validation Obfuscator** and validate in `OnPurchasePending` before granting.
+- In the Editor, Unity's fake store approves purchases from a small dialog and always shows a $0.01 price.
 
 ### Grid rendering (`GridView` + `GridCells.shader`)
 
@@ -99,10 +170,10 @@ Each screen root has a `ScreenPanel`. Hiding a screen disables its Canvas and Gr
 | `Buttons/IconButton` | — | Image + Button. Change shared icon-button styling here |
 | `Buttons/MenuButton`, `PlayPauseButton`, `ResetButton` | IconButton | Each adds its behaviour component and icon |
 | `Buttons/TextButton` | — | TMP text + Button in the title font |
-| `Buttons/PlayButton`, `SettingsButton` | TextButton | Each adds its behaviour, text and tilt |
+| `Buttons/ClassicButton`, `VersusButton`, `SettingsButton` | TextButton | Each adds its behaviour, text and tilt. The mode buttons set `StartGameModeButton.mode` |
 | `Dialogs/Dialog` | — | Canvas, scaler, safe area, background and a working close button |
-| `Dialogs/SettingsDialog`, `InvalidGameDialog` | Dialog | Content plus `SettingsPanel` for settings |
-| `Settings/SliderSetting`, `ToggleSetting` | — | Label + control rows; instances override the label text |
+| `Dialogs/SettingsDialog`, `InvalidGameDialog`, `MatchResultDialog` | Dialog | Content, plus `SettingsPanel` for settings and `MatchResultPanel` for results |
+| `Settings/SliderSetting`, `ToggleSetting` | — | Label + control rows. `SliderSetting` shows its value; set `valueFormat` per instance |
 | `Settings/Slider` | — | Nested inside SliderSetting |
 
 Edit a **base** to change every button or dialog at once. Edit a **variant** for one specific button or dialog.
@@ -113,7 +184,15 @@ Edit a **base** to change every button or dialog at once. Edit a **variant** for
 - **Add a button:** create a variant of `IconButton` or `TextButton`. Write a subclass of `AnimatedButton` that implements `OnPressed()`, and get the services it needs from `ServiceLocator`. Add that component to the variant.
 - **Add a dialog:** create a variant of `Dialog`, add it to the scene with a sort order above the screens it covers, and expose it from `ScreenNavigator`. The close button already works.
 - **Add a setting:** drop a `SliderSetting` or `ToggleSetting` into `SettingsDialog/.../SettingsList`. Add a serialized field and a listener in `SettingsPanel`, and a default in `GameSettings`.
-- **Change the rules:** edit `CellGrid.WillBeAliveNextGeneration`.
+- **Change the Conway rules:** edit `CellGrid`. Survival and birth are in its rule method; newborn colour is the parents' majority.
+- **Change absorption:** edit `ClusterAbsorber`.
+- **Tune the app's Hard play:** edit the weights and candidate cap constants in `StrategicOpponentStrategy`. Its turn delay, colours, pools and match length are in `GameSettings`.
+- **Add a game mode:**
+  1. Subclass `GameModeBase` and return the new type from `ModeType`.
+  2. Add a value to `GameModeType`.
+  3. Add the component under `Systems/GameModeDirector` and drag it into the director's `modes` list.
+  4. Make a `TextButton` variant with `StartGameModeButton` set to the new mode.
+- **Run the tests:** open Window → General → Test Runner → EditMode → Run All. The engine is plain C#, so the tests need no scene.
 
 ## Coding standards
 

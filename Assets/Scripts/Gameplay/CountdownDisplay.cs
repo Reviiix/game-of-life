@@ -1,4 +1,5 @@
 using System.Collections;
+using GameOfLife.Audio;
 using GameOfLife.Configuration;
 using GameOfLife.Core;
 using TMPro;
@@ -14,15 +15,19 @@ namespace GameOfLife.Gameplay
 
         private readonly WaitForSeconds oneSecond = new(1f);
         private TMP_Text label;
+        private AudioManager audioManager;
         private Color defaultLabelColour;
         private string[] secondLabels;
+        private int countdownSeconds;
 
-        /// <summary>Caches the label and precomputes the text for every second the countdown can show.</summary>
-        public void Initialise(GameSettings settings)
+        /// <summary>Caches the label and audio and precomputes the text for every second the countdown can show.</summary>
+        public void Initialise(GameSettings settings, AudioManager audio)
         {
             label = GetComponent<TMP_Text>();
+            audioManager = audio;
             defaultLabelColour = label.color;
-            secondLabels = new string[settings.CountdownSeconds + 1];
+            countdownSeconds = settings.CountdownSeconds;
+            secondLabels = new string[countdownSeconds + 1];
             for (var second = 1; second < secondLabels.Length; second++)
             {
                 secondLabels[second] = second.ToString();
@@ -31,20 +36,22 @@ namespace GameOfLife.Gameplay
             Clear();
         }
 
-        /// <summary>Counts down one label per second; a one-second countdown just shows GO! in the default colour.</summary>
-        public IEnumerator PlayCountdown(int seconds, bool useRandomColours)
+        /// <summary>Counts down the GameSettings countdown length, one label per second; a one-second countdown just shows GO! in the default colour.</summary>
+        public IEnumerator PlayCountdown(bool useRandomColours)
         {
-            if (seconds == 1)
+            if (countdownSeconds == 1)
             {
                 ShowLabel(SingleSecondLabel, useRandomColour: false);
+                audioManager.Play(SoundEffect.CountdownGo);
                 yield return oneSecond;
                 Clear();
                 yield break;
             }
 
-            for (var second = seconds; second >= 1; second--)
+            for (var second = countdownSeconds; second >= 1; second--)
             {
                 ShowLabel(secondLabels[second], useRandomColours);
+                audioManager.Play(SoundEffect.CountdownBeep);
                 yield return oneSecond;
             }
 

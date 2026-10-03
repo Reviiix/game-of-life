@@ -1,9 +1,12 @@
 using System.Collections;
+using GameOfLife.Audio;
 using GameOfLife.Configuration;
 using GameOfLife.Effects;
 using GameOfLife.Gameplay;
+using GameOfLife.Purchasing;
 using GameOfLife.UI.Buttons;
 using GameOfLife.UI.Screens;
+using GameOfLife.UI.Store;
 using UnityEngine;
 
 namespace GameOfLife.Core
@@ -13,20 +16,33 @@ namespace GameOfLife.Core
     public sealed class GameInitialiser : MonoBehaviour
     {
         [SerializeField] private GameSettings settings;
+        [SerializeField] private SoundLibrary soundLibrary;
+
+        private const string AdPassOwnershipStorageKey = "Store.AdPassOwned";
 
         [Header("Services")]
-        [SerializeField] private GameController gameController;
+        [SerializeField] private GameModeDirector gameModeDirector;
+        [SerializeField] private AudioManager audioManager;
         [SerializeField] private ScreenNavigator screenNavigator;
+        [SerializeField] private PurchaseManager purchaseManager;
 
         [Header("Start-up Dependents")]
         [SerializeField] private SettingsPanel settingsPanel;
         [SerializeField] private PlayPauseButton playPauseButton;
         [SerializeField] private ScreenFader screenFader;
+        [SerializeField] private AdPassButton adPassButton;
+        [SerializeField] private RestorePurchasesButton restorePurchasesButton;
+        [SerializeField] private PurchaseFeedback purchaseFeedback;
 
-        /// <summary>Applies platform settings and registers services before any other script's Awake can run.</summary>
+        private GameOptions options;
+        private AdPassOwnership adPassOwnership;
+
+        /// <summary>Applies platform settings, creates the player's options and registers services before any other script's Awake can run.</summary>
         private void Awake()
         {
             Application.targetFrameRate = settings.TargetFrameRate;
+            options = new GameOptions(settings);
+            adPassOwnership = new AdPassOwnership(AdPassOwnershipStorageKey);
             RegisterServices();
         }
 
@@ -48,17 +64,25 @@ namespace GameOfLife.Core
         private void RegisterServices()
         {
             ServiceLocator.Register(settings);
-            ServiceLocator.Register(gameController);
+            ServiceLocator.Register(gameModeDirector);
+            ServiceLocator.Register(audioManager);
             ServiceLocator.Register(screenNavigator);
+            ServiceLocator.Register(purchaseManager);
+            ServiceLocator.Register(adPassOwnership);
         }
 
         /// <summary>Sets up systems so each one's dependencies are ready before it starts.</summary>
         private void InitialiseSystems()
         {
+            audioManager.Initialise(soundLibrary, options);
+            purchaseManager.Initialise(settings.AdPassProductId, adPassOwnership);
             screenNavigator.Initialise();
-            gameController.Initialise(settings, screenNavigator);
-            settingsPanel.Initialise(settings, gameController);
-            playPauseButton.Initialise(gameController);
+            gameModeDirector.Initialise(settings, options, screenNavigator, audioManager);
+            settingsPanel.Initialise(settings, options, audioManager);
+            playPauseButton.Initialise(gameModeDirector);
+            adPassButton.Initialise(purchaseManager, adPassOwnership);
+            restorePurchasesButton.Initialise(purchaseManager, adPassOwnership);
+            purchaseFeedback.Initialise(purchaseManager, adPassOwnership, audioManager);
         }
     }
 }

@@ -8,6 +8,8 @@ namespace GameOfLife.UI.Screens
         [SerializeField] private ScreenPanel mainMenu;
         [SerializeField] private ScreenPanel settingsMenu;
         [SerializeField] private ScreenPanel invalidGameDialog;
+        [SerializeField] private ScreenPanel matchResultDialog;
+        [SerializeField] private ScreenPanel messageDialog;
 
         public ScreenPanel MainMenu => mainMenu;
         public ScreenPanel InvalidGameDialog => invalidGameDialog;
@@ -18,6 +20,8 @@ namespace GameOfLife.UI.Screens
             mainMenu.SetVisible(true);
             settingsMenu.SetVisible(false);
             invalidGameDialog.SetVisible(false);
+            matchResultDialog.SetVisible(false);
+            messageDialog.SetVisible(false);
             settingsMenu.Hidden += mainMenu.Show;
         }
 

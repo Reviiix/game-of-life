@@ -3,7 +3,8 @@
     "rootNamespace": "GameOfLife",
     "references": [
         "Unity.TextMeshPro",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "Unity.Purchasing"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

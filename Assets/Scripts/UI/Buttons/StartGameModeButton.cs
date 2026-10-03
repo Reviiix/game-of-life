@@ -1,15 +1,19 @@
 using GameOfLife.Core;
-using GameOfLife.UI.Screens;
+using GameOfLife.Gameplay;
+using GameOfLife.Gameplay.Modes;
+using UnityEngine;
 
 namespace GameOfLife.UI.Buttons
 {
-    /// <summary>Closes the main menu to reveal the game.</summary>
-    public sealed class CloseMainMenuButton : AnimatedButton
+    /// <summary>Main menu button that closes the menu into one game mode; set the mode on each prefab variant.</summary>
+    public sealed class StartGameModeButton : AnimatedButton
     {
-        /// <summary>Hides the main menu.</summary>
+        [SerializeField] private GameModeType mode;
+
+        /// <summary>Plays the chosen mode, resuming it if it is already active.</summary>
         protected override void OnPressed()
         {
-            ServiceLocator.Get<ScreenNavigator>().MainMenu.Hide();
+            ServiceLocator.Get<GameModeDirector>().PlayMode(mode);
         }
     }
 }

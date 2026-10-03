@@ -1,3 +1,4 @@
+using GameOfLife.Opponents;
 using UnityEngine;
 
 namespace GameOfLife.Configuration
@@ -32,6 +33,30 @@ namespace GameOfLife.Configuration
         [SerializeField, Min(0.01f)] private float maximumEvolutionInterval = 5f;
         [SerializeField, Min(0.01f)] private float startingEvolutionInterval = 1f;
 
+        [Header("Audio")]
+        [SerializeField] private bool musicEnabledOnStart = true;
+        [SerializeField] private bool soundEffectsEnabledOnStart = true;
+
+        [Header("Versus")]
+        [SerializeField] private Color32 playerCellColour = new(0, 102, 255, 255);
+        [SerializeField] private Color32 opponentCellColour = new(230, 38, 38, 255);
+        [SerializeField, Min(1)] private int minimumSetupSquares = 5;
+        [SerializeField, Min(1)] private int maximumSetupSquares = 50;
+        [SerializeField, Min(1)] private int startingSetupSquares = 20;
+        [SerializeField, Min(0)] private int minimumMatchSquares;
+        [SerializeField, Min(0)] private int maximumMatchSquares = 20;
+        [SerializeField, Min(0)] private int startingMatchSquares = 5;
+        [SerializeField, Min(5)] private int minimumMatchSeconds = 15;
+        [SerializeField, Min(5)] private int maximumMatchSeconds = 180;
+        [SerializeField, Min(5)] private int startingMatchSeconds = 60;
+        [SerializeField] private OpponentDifficulty opponentDifficultyOnStart = OpponentDifficulty.Easy;
+        [Tooltip("Pause before the app places a square during setup, so its turn is visible.")]
+        [SerializeField, Min(0)] private float opponentTurnDelay = 0.35f;
+
+        [Header("Store")]
+        [Tooltip("Must match the non-consumable product created in App Store Connect and Google Play Console.")]
+        [SerializeField] private string adPassProductId = "ad_pass";
+
         [Header("Presentation")]
         [SerializeField, Min(0)] private float startupFadeDuration = 1f;
         [SerializeField, Min(0.01f)] private float buttonPressDuration = 0.5f;
@@ -54,6 +79,22 @@ namespace GameOfLife.Configuration
         public float MinimumEvolutionInterval => minimumEvolutionInterval;
         public float MaximumEvolutionInterval => maximumEvolutionInterval;
         public float StartingEvolutionInterval => startingEvolutionInterval;
+        public bool MusicEnabledOnStart => musicEnabledOnStart;
+        public bool SoundEffectsEnabledOnStart => soundEffectsEnabledOnStart;
+        public Color32 PlayerCellColour => playerCellColour;
+        public Color32 OpponentCellColour => opponentCellColour;
+        public int MinimumSetupSquares => minimumSetupSquares;
+        public int MaximumSetupSquares => maximumSetupSquares;
+        public int StartingSetupSquares => startingSetupSquares;
+        public int MinimumMatchSquares => minimumMatchSquares;
+        public int MaximumMatchSquares => maximumMatchSquares;
+        public int StartingMatchSquares => startingMatchSquares;
+        public int MinimumMatchSeconds => minimumMatchSeconds;
+        public int MaximumMatchSeconds => maximumMatchSeconds;
+        public int StartingMatchSeconds => startingMatchSeconds;
+        public OpponentDifficulty OpponentDifficultyOnStart => opponentDifficultyOnStart;
+        public float OpponentTurnDelay => opponentTurnDelay;
+        public string AdPassProductId => adPassProductId;
         public float StartupFadeDuration => startupFadeDuration;
         public float ButtonPressDuration => buttonPressDuration;
         public AnimationCurve ButtonPressScale => buttonPressScale;
@@ -68,6 +109,12 @@ namespace GameOfLife.Configuration
             startingColumns = Mathf.Clamp(startingColumns, minimumGridSize, maximumColumns);
             maximumEvolutionInterval = Mathf.Max(maximumEvolutionInterval, minimumEvolutionInterval);
             startingEvolutionInterval = Mathf.Clamp(startingEvolutionInterval, minimumEvolutionInterval, maximumEvolutionInterval);
+            maximumSetupSquares = Mathf.Max(maximumSetupSquares, minimumSetupSquares);
+            startingSetupSquares = Mathf.Clamp(startingSetupSquares, minimumSetupSquares, maximumSetupSquares);
+            maximumMatchSquares = Mathf.Max(maximumMatchSquares, minimumMatchSquares);
+            startingMatchSquares = Mathf.Clamp(startingMatchSquares, minimumMatchSquares, maximumMatchSquares);
+            maximumMatchSeconds = Mathf.Max(maximumMatchSeconds, minimumMatchSeconds);
+            startingMatchSeconds = Mathf.Clamp(startingMatchSeconds, minimumMatchSeconds, maximumMatchSeconds);
         }
     }
 }
