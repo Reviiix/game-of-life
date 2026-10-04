@@ -807,5 +807,27 @@ namespace GameOfLife.Tests
                     return EmptySymbol;
             }
         }
+
+        /// <summary>Beginning a match forgets cells converted before it, so no stale absorption effects play.</summary>
+        [Test]
+        public void Begin_ForgetsCellsConvertedBeforeIt()
+        {
+            var grid = new CellGrid(3, 6);
+            grid.Resize(3, 6);
+            var absorber = new ClusterAbsorber(grid.MaximumCellCount);
+            var match = new VersusMatch(grid, absorber);
+            foreach (var column in new[] { 1, 2, 3 })
+            {
+                grid.SetOwner(grid.ToCellIndex(1, column), CellOwner.Player);
+            }
+
+            grid.SetOwner(grid.ToCellIndex(1, 4), CellOwner.Opponent);
+            absorber.ResolveAbsorptions(grid);
+            Assume.That(match.LastConvertedCellIndices, Is.Not.Empty);
+
+            match.Begin(new VersusMatchRules(1, 0));
+
+            Assert.That(match.LastConvertedCellIndices, Is.Empty);
+        }
     }
 }

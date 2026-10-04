@@ -1,10 +1,11 @@
 using GameOfLife.Configuration;
+using GameOfLife.Theming;
 using TMPro;
 using UnityEngine;
 
 namespace GameOfLife.UI.Versus
 {
-    /// <summary>Shows the Versus scores, time left and status line on its own canvas, so frequent updates never rebuild the rest of the game screen.</summary>
+    /// <summary>Shows the Versus scores, time left and status line on its own canvas, so frequent updates never rebuild the rest of the game screen; changing scores and the last seconds pop.</summary>
     [RequireComponent(typeof(Canvas))]
     public sealed class VersusHud : MonoBehaviour
     {
@@ -18,6 +19,7 @@ namespace GameOfLife.UI.Versus
         private const string PlayerScoreFormat = "YOU {0}";
         private const string OpponentScoreFormat = "APP {0}";
         private const int SecondsPerMinute = 60;
+        private const int NoValueShown = -1;
 
         [SerializeField] private TMP_Text playerScoreLabel;
         [SerializeField] private TMP_Text opponentScoreLabel;
@@ -25,19 +27,38 @@ namespace GameOfLife.UI.Versus
         [SerializeField] private TMP_Text statusLabel;
         [Tooltip("Shades the app's half of the board during setup; it sits in the Versus board area, over the grid.")]
         [SerializeField] private RectTransform opponentHalfShade;
+        [Tooltip("In the last this many seconds the timer turns to the danger colour and pops every second.")]
+        [SerializeField, Min(0)] private int urgentSeconds = 10;
 
         private Canvas hudCanvas;
+        private ThemedGraphic timerColour;
         private string[] timerLabels;
+        private LabelPop playerScorePop;
+        private LabelPop opponentScorePop;
+        private LabelPop timerPop;
+        private int shownPlayerScore = NoValueShown;
+        private int shownOpponentScore = NoValueShown;
+        private int shownSeconds = NoValueShown;
 
-        /// <summary>Colours the score labels, precomputes every timer label and starts hidden.</summary>
-        public void Initialise(GameSettings settings)
+        /// <summary>Precomputes every timer label, builds the pop tweens and starts hidden.</summary>
+        public void Initialise(GameSettings settings, Theme theme)
         {
             hudCanvas = GetComponent<Canvas>();
-            playerScoreLabel.color = (Color)settings.PlayerCellColour;
-            opponentScoreLabel.color = (Color)settings.OpponentCellColour;
+            timerColour = timerLabel.GetComponent<ThemedGraphic>();
             timerLabels = BuildTimerLabels(settings.MaximumMatchSeconds);
+            playerScorePop = new LabelPop(playerScoreLabel.transform, theme);
+            opponentScorePop = new LabelPop(opponentScoreLabel.transform, theme);
+            timerPop = new LabelPop(timerLabel.transform, theme);
             HideOpponentHalfShade();
             Hide();
+        }
+
+        /// <summary>Removes the pop tweens with the HUD.</summary>
+        private void OnDestroy()
+        {
+            playerScorePop?.Kill();
+            opponentScorePop?.Kill();
+            timerPop?.Kill();
         }
 
         /// <summary>Makes the HUD visible.</summary>
@@ -52,17 +73,40 @@ namespace GameOfLife.UI.Versus
             hudCanvas.enabled = false;
         }
 
-        /// <summary>Shows how many living squares each side has.</summary>
+        /// <summary>Shows how many living squares each side has, popping any score that changed.</summary>
         public void ShowScores(int playerScore, int opponentScore)
         {
-            playerScoreLabel.SetText(PlayerScoreFormat, playerScore);
-            opponentScoreLabel.SetText(OpponentScoreFormat, opponentScore);
+            if (playerScore != shownPlayerScore)
+            {
+                shownPlayerScore = playerScore;
+                playerScoreLabel.SetText(PlayerScoreFormat, playerScore);
+                playerScorePop.Play();
+            }
+
+            if (opponentScore != shownOpponentScore)
+            {
+                shownOpponentScore = opponentScore;
+                opponentScoreLabel.SetText(OpponentScoreFormat, opponentScore);
+                opponentScorePop.Play();
+            }
         }
 
-        /// <summary>Shows the match time left as minutes and seconds.</summary>
+        /// <summary>Shows the match time left as minutes and seconds; in the last seconds it turns to the danger colour and pops as each second passes.</summary>
         public void ShowTimeRemaining(int seconds)
         {
+            if (seconds == shownSeconds)
+            {
+                return;
+            }
+
+            shownSeconds = seconds;
             timerLabel.SetText(timerLabels[Mathf.Clamp(seconds, 0, timerLabels.Length - 1)]);
+            var isUrgent = seconds <= urgentSeconds;
+            timerColour.SetColour(isUrgent ? ThemeColour.Danger : ThemeColour.Ink);
+            if (isUrgent)
+            {
+                timerPop.Play();
+            }
         }
 
         /// <summary>Tells the player it is their setup turn and how many setup squares they have left.</summary>

@@ -348,6 +348,56 @@ namespace GameOfLife.Tests
             Assert.That(copy.CountCells(CellOwner.Opponent), Is.EqualTo(1));
         }
 
+        /// <summary>Each converted cell is listed once, and only cells that changed owner are listed.</summary>
+        [Test]
+        public void ConvertedCellIndices_ListsEachConvertedCellOnce()
+        {
+            var grid = CreateGrid(
+                "......",
+                ".PPPO.",
+                "....O.");
+            var absorber = new ClusterAbsorber(grid.MaximumCellCount);
+
+            absorber.ResolveAbsorptions(grid);
+
+            Assert.That(absorber.ConvertedCellIndices, Is.EquivalentTo(new[] { grid.ToCellIndex(1, 4), grid.ToCellIndex(2, 4) }));
+        }
+
+        /// <summary>A resolve that absorbs nothing empties the list left by the previous one.</summary>
+        [Test]
+        public void ConvertedCellIndices_IsEmptiedByAResolveThatAbsorbsNothing()
+        {
+            var grid = CreateGrid(
+                "......",
+                ".PPPO.",
+                "......");
+            var absorber = new ClusterAbsorber(grid.MaximumCellCount);
+            absorber.ResolveAbsorptions(grid);
+
+            absorber.ResolveAbsorptions(grid);
+
+            Assert.That(absorber.ConvertedCellIndices, Is.Empty);
+        }
+
+        /// <summary>ForgetConvertedCells empties the list, so the same cells are listed again after the next conversion.</summary>
+        [Test]
+        public void ForgetConvertedCells_EmptiesTheList()
+        {
+            var grid = CreateGrid(
+                "......",
+                ".PPPO.",
+                "......");
+            var absorber = new ClusterAbsorber(grid.MaximumCellCount);
+            absorber.ResolveAbsorptions(grid);
+
+            absorber.ForgetConvertedCells();
+            Assert.That(absorber.ConvertedCellIndices, Is.Empty);
+            grid.SetOwner(grid.ToCellIndex(1, 4), CellOwner.Opponent);
+            absorber.ResolveAbsorptions(grid);
+
+            Assert.That(absorber.ConvertedCellIndices, Is.EqualTo(new[] { grid.ToCellIndex(1, 4) }));
+        }
+
         /// <summary>Resolves absorptions with a fresh absorber sized for the grid and returns the converted cell count.</summary>
         private static int Resolve(CellGrid grid)
         {

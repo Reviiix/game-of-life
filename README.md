@@ -1,6 +1,6 @@
 # Conway's Game of Life
 
-A portrait mobile (Android and iOS) version of Conway's Game of Life, built with Unity 6000.3 and URP. There are two modes on the main menu:
+A portrait mobile (Android and iOS) version of Conway's Game of Life, built with Unity 6000.3 and URP. Cells are rounded tiles that pop, shrink and bounce as they change, the whole interface follows one minimal light or dark theme, and absorptions in Versus burst into particles. There are two modes on the main menu:
 
 - **Classic:** tap cells to bring them to life, press play, and watch them evolve.
 - **Versus:** you (blue) against the app (red). Take turns placing squares on your own half, then a timed match runs. Newborn cells take their parents' majority colour. When clusters of different colours touch, the bigger cluster converts the smaller one. Whoever has the most squares when time runs out wins.
@@ -11,19 +11,24 @@ A portrait mobile (Android and iOS) version of Conway's Game of Life, built with
 2. Open `Assets/Scenes/Game.unity`. It's the only scene, and it's already in Build Settings.
 3. Press Play. Set the Game view to a portrait resolution, such as 1080×2280.
 
-Most tuning needs no code: select `Assets/Configuration/GameSettings.asset` and edit it in the Inspector.
+Most tuning needs no code:
+- `Assets/Configuration/GameSettings.asset` holds grid limits, starting options, timings and the store product.
+- `Assets/Configuration/Theme.asset` holds the light and dark palettes, the tile shape, and the duration and easing of every animation.
 
 ## Project layout
 
 | Folder | Contents |
 |---|---|
-| `Art/` | Fonts, sprites (`Sprites/Icons.png`), audio (`Audio/SoundEffects`, `Audio/Music`), the grid shader and its material |
-| `Configuration/` | `GameSettings.asset` (tunable values) and `SoundLibrary.asset` (clips, volumes and repeat limits) |
+| `Art/` | Fonts, the interface sprite sheet (`Sprites/Interface.png`), audio (`Audio/SoundEffects`, `Audio/Music`), the grid shader and the grid and particle materials |
+| `Configuration/` | `GameSettings.asset` (tunable values), `Theme.asset` (palettes, tile shape, animation) and `SoundLibrary.asset` (clips, volumes and repeat limits) |
+| `Plugins/Demigiant/DOTween/` | DOTween 1.2.705 (free) for every animation. The game uses only the core `DOTween.dll`; every optional module is switched off, and DOTween's own helper script compiles into its `DOTween.Modules` assembly. Its settings live in `Resources/DOTweenSettings.asset` beside it |
 | `Prefabs/UI/` | Buttons, dialogs and settings rows (see [Prefabs](#prefabs)) |
+| `Prefabs/Effects/` | `AbsorptionEffect`, the Versus absorption particles |
 | `Rendering/` | URP pipeline, renderer and volume assets |
 | `Scenes/` | `Game.unity` |
 | `Scripts/` | All game code, compiled into the `GameOfLife` assembly |
 | `../Tools/Audio/` | `generate_sounds.py`, which synthesises every sound and the music loop. Edit it and run `python3 Tools/Audio/generate_sounds.py` to regenerate |
+| `../Tools/Art/` | `generate_ui_sprites.py`, which draws the rounded panel, circle, particle tile and icons into `Interface.png`. Run `python3 Tools/Art/generate_ui_sprites.py` to regenerate; the slicing lives in the texture's import settings |
 | `Tests/EditMode/` | NUnit tests for the pure C# engine (Window → General → Test Runner) |
 | `Libraries/pure-unity-methods/` | Shared utility library. **The game does not use it.** It is Editor-only and opt-in, ready to be extracted |
 | `TextMesh Pro/` | TMP resources and shaders |
@@ -37,14 +42,16 @@ Most tuning needs no code: select `Assets/Configuration/GameSettings.asset` and 
 | `Simulation` | `CellGrid` (two-colour Conway rules), `CellOwner`, `ClusterAbsorber`. Pure C#, no Unity |
 | `Opponents` | The app's placement AI: `RandomOpponentStrategy` (Easy), `StrategicOpponentStrategy` (Hard). Pure C# |
 | `Versus` | `VersusMatch`: the rules of one match (turns, pools, regions, early end, outcome). Pure C# |
-| `Grid` | `GridView` draws the grid; `GridTouchInput` turns taps into cell indices |
+| `Grid` | `GridView` draws the board, `CellAnimator` animates changing cells, `CellPaint` names what a cell is drawn as, `GridTouchInput` turns taps into cell indices |
+| `Theming` | `Theme` ScriptableObject, `ThemePalette`, `ThemeColour` roles, `ThemeService` (current palette and dark-mode blend), `ThemedGraphic` |
+| `Motion` | `EasedMotion` (a duration plus a DOTween ease, editable in the Inspector), `ReplayableTween` (a tween built once and replayed) and `FrameTicker` (a per-frame callback on DOTween's update, built once) |
 | `Gameplay` | `GameModeDirector` (keeps one mode active), `GameOptions` (the player's Settings choices), `CountdownDisplay` |
 | `Gameplay.Modes` | `GameModeBase`, `ClassicGameMode`, `VersusGameMode` (timing, turns, pause, result) |
 | `UI.Versus` | `VersusHud` (score, timer, status, setup shading), `MatchResultPanel` |
-| `UI.Screens` | `ScreenPanel`, `ScreenNavigator`, `SettingsPanel`, `SliderSetting` |
+| `UI.Screens` | `ScreenPanel` (show and hide transitions), `ScreenNavigator`, `SettingsPanel`, `SliderSetting`, `ToggleSwitch` |
 | `UI.Buttons` | `AnimatedButton` and one small subclass per button action |
-| `UI` | `SafeAreaFitter`, `VersionLabel` |
-| `Effects` | `ScreenFader` (start-up fade from black) |
+| `UI` | `SafeAreaFitter`, `VersionLabel`, `LabelPop`, `LayeredScale` |
+| `Effects` | `ScreenFader` (start-up fade from black), `AbsorptionEffect` (Versus absorption particles) |
 | `Purchasing` | `PurchaseManager` (Unity IAP v5 store connection, buying and restoring the ad pass), `AdPassOwnership` (saved entitlement) |
 | `UI.Store` | `AdPassButton`, `RestorePurchasesButton`, `PurchaseFeedback` |
 | `Audio` | `AudioManager` (music plus a pool of reused effect sources), `SoundLibrary`, `SoundEffect`, `SoundEffectSettings` |
@@ -53,7 +60,7 @@ Most tuning needs no code: select `Assets/Configuration/GameSettings.asset` and 
 
 ```
 Systems              GameInitialiser, GameModeDirector (ClassicMode, VersusMode), ScreenNavigator, EventSystem, MainCamera
-GameScreen           Canvas 0: Grid + OpponentHalfShade (full screen), SafeArea/ButtonBar, CountdownLabel, VersusHud
+GameScreen           Canvas 0 (Screen Space - Camera): Grid (with AbsorptionEffect) + OpponentHalfShade, SafeArea/ButtonBar (floating dock), CountdownLabel, VersusHud
 MainMenuScreen       Canvas 1: title, Classic / Versus / Settings buttons, version label
 SettingsScreen       Canvas 3: SettingsDialog prefab variant (scrolls)
 InvalidGameScreen    Canvas 4: InvalidGameDialog prefab variant
@@ -62,7 +69,9 @@ MessageScreen        Canvas 6: MessageDialog prefab variant (purchase results)
 ScreenFade           Canvas 100: black overlay that fades out at start-up
 ```
 
-Controls and text sit under a `SafeArea` object so they avoid notches. Full-screen backgrounds and the Classic grid sit outside it. In Versus the grid moves into `SafeArea/VersusBoardArea`, between the HUD and the button bar, so the player can reach every cell. It moves back when Versus exits. The camera clears to white so the bars look the same in both layouts.
+Controls and text sit under a `SafeArea` object so they avoid notches. Full-screen backgrounds and the Classic grid sit outside it. In Versus the grid moves into `SafeArea/VersusBoardArea`, between the HUD and the button bar, so the player can reach every cell. It moves back when Versus exits.
+
+`GameScreen` renders through `MainCamera` (Screen Space - Camera, UI layer only) so the absorption particles, which are ordinary particle systems, can draw over the board. The camera clears to the theme's background colour. Every other screen is a Screen Space - Overlay canvas, so menus and dialogs always draw above the board and its particles.
 
 ## How it works
 
@@ -70,15 +79,16 @@ Controls and text sit under a `SafeArea` object so they avoid notches. Full-scre
 
 `GameInitialiser` is the only entry point. It runs before every other script (`DefaultExecutionOrder(-1000)`):
 
-1. **Awake:** sets the target frame rate, creates `GameOptions`, and registers the services: `GameSettings`, `GameModeDirector` and `ScreenNavigator`. `GameOptions` is passed to the systems that need it through `Initialise`.
+1. **Awake:** sets the target frame rate, initialises DOTween (`DOTween.Init` with safe mode and preallocated capacity), creates `GameOptions` and the `ThemeService`, and registers the services, including `GameSettings` and `ThemeService`. `GameOptions` is passed to the systems that need it through `Initialise`.
 2. **Start:** initialises the systems in dependency order:
-   - screens
-   - the game mode director (allocates the board and grid texture, and builds both modes and both AI opponents)
-   - the settings panel
-   - the play/pause button
+   - audio and purchases
+   - screens (each `ScreenPanel` builds its transition tweens)
+   - the game mode director (allocates the board, the grid texture and the cell animator, and builds both modes and both AI opponents)
+   - the settings panel (which initialises each settings switch)
+   - the play/pause button and the store buttons
 
    Classic mode starts behind the main menu.
-3. Waits one frame so load hitches don't eat into the fade, then fades in from black.
+3. Waits one frame so load hitches don't eat into the fade, then fades in from black with the Theme's `startupFade`.
 
 To add a system, give it an `Initialise(...)` method and call it from `GameInitialiser.InitialiseSystems()` in the right order. Avoid doing setup work in its own `Start()`.
 
@@ -88,15 +98,16 @@ To add a system, give it an `Initialise(...)` method and call it from `GameIniti
 
 - **Register** in `GameInitialiser.RegisterServices()`.
 - **Use** with `ServiceLocator.Get<GameModeDirector>()`. This is how prefab buttons reach scene systems without scene references.
-- **Which style to use:** anything that subscribes to events or needs set-up at start-up gets its dependencies through `Initialise(...)`, called by `GameInitialiser`. Fire-and-forget actions, such as a button press, call `ServiceLocator.Get` when they run.
+- **Which style to use:** anything that subscribes to scene-system events or needs ordered set-up gets its dependencies through `Initialise(...)`, called by `GameInitialiser` (or by the system that owns it, as `SettingsPanel` initialises each `ToggleSwitch`). Fire-and-forget actions, such as a button press, call `ServiceLocator.Get` when they run.
+- **View components** that only need the theme (`ThemedGraphic`, `AnimatedButton`) get the `ThemeService` from `ServiceLocator` in `OnEnable`/`Awake`. That is safe because `GameInitialiser` registers it in its `Awake`, which runs first (execution order -1000).
 
 ### Game modes (`GameModeDirector`)
 
 The director owns the single `CellGrid` and keeps exactly one `GameModeBase` active (its `modes` list in the Inspector). Taps, the play/pause and reset buttons, and option changes all go to the active mode.
 - **The mode buttons:** pressing CLASSIC or VERSUS on the menu resumes that mode if it's already active, or starts it fresh.
 - **The main menu:** opening it pauses a Versus match. Classic keeps running under it. Play/pause and reset presses that finish after the menu has opened are ignored.
-- **Colours:** each mode chooses its own cell colours through `GetCellColour`.
-- **Repainting:** `RepaintChangedCells()` redraws only the cells in `CellGrid.ChangedCellIndices`. That list accumulates until it's cleared.
+- **Colours:** each mode says how to draw a cell in `PaintCell`: a `CellPaint` role (`Ink`, `Player`, `Opponent` or `Empty`), whose colour comes from the theme, or a custom colour for random colours.
+- **Repainting:** `RepaintChangedCells()` redraws only the cells in `CellGrid.ChangedCellIndices`, animating each change. That list accumulates until it's cleared.
 
 **Classic** (`ClassicGameMode`): `Editing` → (play) → `CountingDown` → `Running` → (pause) → `Editing`.
 - Taps toggle cells in every phase except `CountingDown`.
@@ -108,17 +119,17 @@ The director owns the single `CellGrid` and keeps exactly one `GameModeBase` act
 - **Match:** a countdown, then one match clock coroutine counts the time down and triggers generations and the app's moves. Remaining times are kept exactly across pauses.
 - **App moves:** the app spends its in-match squares at jittered intervals. Each one must touch a living cell, so a square never appears out of nowhere. `VersusMatch.CanPlace` enforces this whatever strategy is used. Your own squares can go on any empty cell. Its move search runs on a worker thread against a board snapshot (`OpponentMoveSearch`), so Hard never stalls a frame.
 - **After the match:** Play, or choosing VERSUS from the menu, starts a new match.
-- **Absorption** (`ClusterAbsorber`) is resolved after every placement and every generation.
+- **Absorption** (`ClusterAbsorber`) is resolved after every placement and every generation. `VersusMatch.LastConvertedCellIndices` lists the cells that changed side, and `AbsorptionEffect` bursts particles from each one in its new owner's colour.
 - **Early end:** the match ends early if a side has no squares left on the board and none left to place.
 
-There is no `Update()` anywhere in the game. The only per-frame work is the Versus match clock, which runs only while a match is running.
+There is no `Update()` anywhere in the game. The Versus match clock runs only while a match runs, and the board's cell animation (`FrameTicker`) only while cells are animating. DOTween's own update runs every frame, because the replayable tweens stay paused in its list rather than being killed; for a paused tween it does only a cheap check. The tweens are not linked to GameObjects, so DOTween does no per-frame link checks; each owner kills its tweens in `OnDestroy` instead.
 
 ### Audio (`AudioManager`)
 
 `AudioManager` is a registered service, initialised first by `GameInitialiser`.
 - **Music:** one looping source streams `puzzle_loop` and fades in. The MUSIC toggle pauses and resumes it.
 - **Effects:** play through a small pool of AudioSources (`SoundLibrary.simultaneousSoundEffects`), reused round-robin, so overlapping sounds never allocate.
-- **Saved settings:** the MUSIC and SOUND EFFECTS toggles are saved on the device with `PlayerPrefs`. Other Settings last for the session.
+- **Saved settings:** the MUSIC, SOUND EFFECTS and DARK MODE toggles are saved on the device with `PlayerPrefs` (see `GameOptions`). Other Settings last for the session.
 - **Repeat limits:** each effect's `minimumSecondsBetweenPlays` stops rapid events, such as fast generations or slider drags, piling up.
 - **Where sounds are triggered:**
   - Buttons click in `AnimatedButton` and `CloseScreenButton`; toggles click in `SettingsPanel`; sliders tick in `SliderSetting`.
@@ -150,43 +161,82 @@ The £0.99 ad pass is a **non-consumable** product. Its ID, `ad_pass`, is set in
 - Optionally add Google Play receipt validation: generate the tangle with **Services > In-App Purchasing > Receipt Validation Obfuscator** and validate in `OnPurchasePending` before granting.
 - In the Editor, Unity's fake store approves purchases from a small dialog and always shows a $0.01 price.
 
-### Grid rendering (`GridView` + `GridCells.shader`)
+### Grid rendering (`GridView` + `CellAnimator` + `GridCells.shader`)
 
-The whole grid is **one UI quad**:
-- A texture holds one pixel per cell, with point filtering.
-- The shader draws the lines between cells.
-- The grid size and line thickness travel in spare UV channels, so no per-instance material is needed. This is why `GameScreen`'s Canvas has **TexCoord1 and TexCoord2** enabled under Additional Shader Channels.
+The whole board is **one UI quad** drawn by one shader, however many cells there are:
+- A texture holds one pixel per cell, with point filtering. Its RGB is the tile colour and its alpha is the tile's **size** (alpha 0 is an empty cell, 170 is full size, and the headroom above that is for bouncy overshoot).
+- The shader draws every cell as a rounded tile with an anti-aliased signed-distance edge, and a faint tile behind each empty cell when GRID HIGHLIGHTS is on.
+- Grid size, cell size, tile gap and corner radius travel in spare UV channels, so no per-instance material is needed. This is why `GameScreen`'s Canvas has **TexCoord1 and TexCoord2** enabled under Additional Shader Channels.
 
-A generation updates only the changed pixels and uploads the texture once. No UI meshes are rebuilt. In Edit mode the grid shows a preview using `GameSettings` values, and nothing is saved into the scene.
+**Cell animation.** When a cell changes, `CellAnimator` starts one of three motions from the Theme: *appear* (grows in, OutBack), *disappear* (shrinks away in its old colour, InBack) or *convert* (an absorbed cell squashes, changes colour and springs back, OutElastic). Each motion starts from the size and colour the cell shows at that moment, so a cell changed again mid-animation never jumps. Every frame while any cell is animating, `GridView`'s `FrameTicker` evaluates each animating cell with DOTween's own easing maths (`EasedMotion.Evaluate`), writes its pixel and uploads the texture once. All state, including the ticker, is allocated once at the largest board size. Animations are capped at a share of the time between generations, so fast games stay readable, and the shader keeps every bouncing tile inside its cell on both axes.
+
+In Edit mode the board shows a preview using `GameSettings` and the Theme, and nothing is saved into the scene.
+
+### Theme and dark mode (`Theme` + `ThemeService`)
+
+Every colour in the game comes from `Theme.asset`, which has a light and a dark `ThemePalette`. A palette gives each `ThemeColour` role a colour: `Background`, `Surface` (cards and bars), `SurfaceStrong` (empty tiles, tracks), `Raised` (dialog cards), `Ink` (text, icons, Classic cells, primary buttons), `InkMuted`, `InkInverse` (text on ink), `Player`, `Opponent`, `Danger` (reset, last seconds), `Scrim` (behind dialogs) and `Shade` (the app's half during setup).
+- **Colouring a graphic:** add `ThemedGraphic` to any Image, RawImage or text and pick a role. It registers with the `ThemeService` while enabled and is repainted whenever the palette changes. Never set a colour in the Inspector or in code instead.
+- **Dark mode:** the DARK MODE switch in Settings calls `ThemeService.SetDarkMode`, which blends every themed graphic, the board, the switches and the camera background to the other palette over `paletteCrossfade`. The choice is saved with `PlayerPrefs`.
+- **Code that needs a colour** reads `ThemeService.Palette.Get(role)` or listens to `PaletteChanged`, as `GridView` and `ToggleSwitch` do.
+- **Adding a role:** add it at the **end** of `ThemeColour` (scenes store roles by number), give it a field in `ThemePalette` and a case in both `ThemePalette.Get` and `ThemePalette.Set`, and set it in both palettes. `ThemeTests` fails if a role is missing a case.
+- **Fonts:** Helvetica Neue Bold for everything; the stencil title font only for the game's title.
+- **Shapes:** rounded panels are the nine-sliced `RoundedPanel` sprite; an Image's *Pixels Per Unit Multiplier* sets its corner radius (radius = 96 ÷ multiplier).
+
+### Animation (DOTween)
+
+All motion uses DOTween, configured from the Theme so a designer can change any duration or ease (including overshoot and elastic period) without code:
+- **Start-up** (`ScreenFader`) fades in from black with `startupFade`.
+- **Buttons** (`AnimatedButton`) squeeze while held and spring back with an elastic bounce, then act. A button that stops being interactable while held still springs back.
+- **Screens and dialogs** (`ScreenPanel`) fade in while their `poppedContent` pops to full size and their `staggeredItems` (the title and menu buttons) pop in one after another; they fade out from wherever their fade is when hidden. A duration of 0 shows or hides instantly.
+- **Shared scales:** when two animations scale the same object (a menu button popping in while it is pressed), each sets its own factor on the object's `LayeredScale`, which multiplies them, so neither overwrites the other.
+- **Switches** (`ToggleSwitch`) slide their knob with a bounce and blend their colours.
+- **Labels** (`LabelPop`, `CountdownDisplay`) pop for countdown numbers, changing scores and the last ten seconds of a match.
+- **Cells** use the same DOTween curves through `CellAnimator` (above).
+
+Tweens are built once (`ReplayableTween`: a paused tween of progress from 0 to 1 that the owner maps onto what it animates) and replayed, so animating never allocates. Each owner kills its tweens in `OnDestroy`; the `ThemeService` crossfade is killed by `GameInitialiser` when the scene unloads.
+
+DOTween runs in safe mode, which catches exceptions thrown inside tween callbacks, including button actions that run when a spring finishes. `GameInitialiser` sets `DOTween.safeModeLogBehaviour` to `Error` so those exceptions still appear in the console.
+
+DOTween is the free Asset Store package. To upgrade it, import the new version over `Plugins/Demigiant`, then open **Tools → Demigiant → DOTween Utility Panel → Setup DOTween**, untick every module and keep **Create ASMDEF** ticked.
+
+### Particles (`AbsorptionEffect`)
+
+The `AbsorptionEffect` prefab sits under the board and holds two particle systems: a soft flash per absorbed cell and a few sparks that fly out and spin. Bursts are emitted with `ParticleSystem.Emit` at each converted cell's centre, so nothing is instantiated; the particle systems pool their own particles. Big absorptions burst from at most `maximumCellsPerBurst` evenly spread cells. Particle sizes and speeds are in cells, so they suit any board size. Overlapping bursts are thinned to the particles still free, so a burst is spread out rather than cut short. Both systems use the `ParticleTile` sprite through texture-sheet animation and the `AbsorbParticles` material, and draw at sorting order 10, above the game screen canvas.
 
 ### Screens
 
-Each screen root has a `ScreenPanel`. Hiding a screen disables its Canvas and GraphicRaycaster, so hidden screens cost nothing to draw or hit-test. Disabling the Canvas is cheaper than deactivating the GameObject. `ScreenNavigator` owns which screens show at start-up and how they relate (Settings replaces the main menu, and closing it brings the menu back).
+Each screen root has a `ScreenPanel` and a `CanvasGroup`. Showing a screen plays its transition; hiding one stops it taking taps at once, fades it out, then disables its Canvas, so hidden screens cost nothing to draw or hit-test. Disabling the Canvas is cheaper than deactivating the GameObject. `SetVisible` switches instantly, for start-up. `ScreenNavigator` owns which screens show at start-up and how they relate: Settings opens over the main menu, which is hidden once Settings has fully appeared (`Shown`), and closing Settings brings the menu back (`Hidden`).
 
 ## Prefabs
 
 | Prefab | Base | Notes |
 |---|---|---|
-| `Buttons/IconButton` | — | Image + Button. Change shared icon-button styling here |
-| `Buttons/MenuButton`, `PlayPauseButton`, `ResetButton` | IconButton | Each adds its behaviour component and icon |
-| `Buttons/TextButton` | — | TMP text + Button in the title font |
-| `Buttons/ClassicButton`, `VersusButton`, `SettingsButton` | TextButton | Each adds its behaviour, text and tilt. The mode buttons set `StartGameModeButton.mode` |
-| `Dialogs/Dialog` | — | Canvas, scaler, safe area, background and a working close button |
-| `Dialogs/SettingsDialog`, `InvalidGameDialog`, `MatchResultDialog` | Dialog | Content, plus `SettingsPanel` for settings and `MatchResultPanel` for results |
-| `Settings/SliderSetting`, `ToggleSetting` | — | Label + control rows. `SliderSetting` shows its value; set `valueFormat` per instance |
-| `Settings/Slider` | — | Nested inside SliderSetting |
+| `Buttons/IconButton` | — | Themed icon Image + Button. Change shared icon-button styling here |
+| `Buttons/MenuButton`, `PlayPauseButton`, `ResetButton` | IconButton | Each adds its behaviour component and icon from `Interface.png`; reset uses the danger colour |
+| `Buttons/TextButton` | — | Rounded ink panel + Button, with a `Label` child in inverse ink. This is the primary style |
+| `Buttons/ClassicButton`, `VersusButton` | TextButton | Primary buttons. They set `StartGameModeButton.mode` |
+| `Buttons/SettingsButton`, `AdPassButton`, `RestorePurchasesButton` | TextButton | Secondary buttons: surface panel with ink text. `AdPassButton` adds its `Price` label |
+| `Dialogs/Dialog` | — | Canvas, scaler, full-screen scrim, and a raised rounded `Card` in the safe area holding a working OK button. The card pops in |
+| `Dialogs/InvalidGameDialog`, `MatchResultDialog`, `MessageDialog` | Dialog | Add a `Message` to the card, plus `MatchResultPanel` or `MessagePanel` |
+| `Dialogs/SettingsDialog` | Dialog | A full page: the card fills the safe area and holds the title, the scrolling list of section cards, and DONE |
+| `Settings/SliderSetting` | — | Label and value above a full-width slider. Set `valueFormat` per instance |
+| `Settings/ToggleSetting` | — | Label and a `ToggleSwitch` |
+| `Settings/Slider` | — | Rounded track, ink fill and round handle; nested inside SliderSetting |
+| `Effects/AbsorptionEffect` | — | Flash and spark particle systems for absorptions |
 
 Edit a **base** to change every button or dialog at once. Edit a **variant** for one specific button or dialog.
 
 ## Common tasks
 
-- **Change a default, a colour, a timing or a grid limit:** edit `GameSettings.asset`.
+- **Change a default, a timing or a grid limit:** edit `GameSettings.asset`.
+- **Change a colour, the tile shape or an animation:** edit `Theme.asset`. Colours are per palette; each animation is a duration and a DOTween ease.
 - **Add a button:** create a variant of `IconButton` or `TextButton`. Write a subclass of `AnimatedButton` that implements `OnPressed()`, and get the services it needs from `ServiceLocator`. Add that component to the variant.
-- **Add a dialog:** create a variant of `Dialog`, add it to the scene with a sort order above the screens it covers, and expose it from `ScreenNavigator`. The close button already works.
-- **Add a setting:** drop a `SliderSetting` or `ToggleSetting` into `SettingsDialog/.../SettingsList`. Add a serialized field and a listener in `SettingsPanel`, and a default in `GameSettings`.
+- **Add a dialog:** create a variant of `Dialog`, put its content in `SafeArea/Card` above the OK button, add it to the scene with a sort order above the screens it covers, and expose it from `ScreenNavigator`, which gives it its transitions. The OK button already closes it.
+- **Add a setting:** drop a `SliderSetting` or `ToggleSetting` into the right section card in `SettingsDialog/.../SettingsList` (`BoardCard`, `DisplayCard`, `SoundCard` or `VersusCard`). Add a serialized field and a listener in `SettingsPanel` (toggles also need `SnapToValue` on their switch, which the toggle loop does), and a default in `GameSettings`.
+- **Add an icon or shape:** draw it in `Tools/Art/generate_ui_sprites.py`, run the script, then add its rectangle in the `Interface.png` Sprite Editor. The sheet holds the rounded panel, circle, particle tile and the play, pause, reset and menu icons.
 - **Change the Conway rules:** edit `CellGrid`. Survival and birth are in its rule method; newborn colour is the parents' majority.
 - **Change absorption:** edit `ClusterAbsorber`.
-- **Tune the app's Hard play:** edit the weights and candidate cap constants in `StrategicOpponentStrategy`. Its turn delay, colours, pools and match length are in `GameSettings`.
+- **Tune the app's Hard play:** edit the weights and candidate cap constants in `StrategicOpponentStrategy`. Its turn delay, pools and match length are in `GameSettings`; its colour is the `Opponent` role in each palette of `Theme.asset`.
 - **Add a game mode:**
   1. Subclass `GameModeBase` and return the new type from `ModeType`.
   2. Add a value to `GameModeType`.
@@ -211,11 +261,13 @@ Follow these for all new work:
 11. Cull hidden UI by disabling Canvas + GraphicRaycaster. Turn off `raycastTarget` on graphics that don't take input.
 12. Import sprites at their native size (max size ≥ source), with no mipmaps for UI, and use ASTC 4×4 on mobile.
 13. Delete unused code and assets instead of leaving them in the project.
+14. Take every colour from the Theme (`ThemedGraphic` or `ThemeService.Palette`); never hard-code one.
+15. Animate with DOTween, with durations and eases in the Theme as `EasedMotion`s. Build tweens once (`ReplayableTween`) and replay them.
 
 ## Mobile settings already applied
 
 - Portrait only; Android ARMv7 + ARM64 (IL2CPP); accelerometer off; target frame rate from `GameSettings` (60).
-- URP: HDR, MSAA, shadows, additional lights and LOD cross-fade off. The camera renders no layers (the UI is overlay).
+- URP: HDR, MSAA, shadows, additional lights and LOD cross-fade off. The camera renders only the UI layer: the game screen canvas and its particles.
 - Title font baked to a static atlas, so no glyphs are generated at runtime.
 
 ## Before shipping

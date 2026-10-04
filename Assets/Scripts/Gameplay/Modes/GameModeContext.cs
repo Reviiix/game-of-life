@@ -2,11 +2,12 @@ using GameOfLife.Audio;
 using GameOfLife.Configuration;
 using GameOfLife.Grid;
 using GameOfLife.Simulation;
+using GameOfLife.Theming;
 using GameOfLife.UI.Screens;
 
 namespace GameOfLife.Gameplay.Modes
 {
-    /// <summary>Everything game modes share: the one board and its view, the countdown, audio, settings, options and screens.</summary>
+    /// <summary>Everything game modes share: the one board and its view, the countdown, audio, theme, settings, options and screens.</summary>
     public sealed class GameModeContext
     {
         public GameSettings Settings { get; }
@@ -16,10 +17,12 @@ namespace GameOfLife.Gameplay.Modes
         public GridView GridView { get; }
         public CountdownDisplay Countdown { get; }
         public AudioManager Audio { get; }
+        public ThemeService Theme { get; }
 
         /// <summary>Bundles the shared systems handed to each game mode by the GameModeDirector.</summary>
-        public GameModeContext(GameSettings settings, GameOptions options, ScreenNavigator screens, CellGrid grid, GridView gridView, CountdownDisplay countdown, AudioManager audio)
+        public GameModeContext(GameSettings settings, GameOptions options, ScreenNavigator screens, CellGrid grid, GridView gridView, CountdownDisplay countdown, AudioManager audio, ThemeService theme)
         {
+            Theme = theme;
             Settings = settings;
             Options = options;
             Screens = screens;

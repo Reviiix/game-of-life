@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace GameOfLife.Simulation
 {
@@ -21,7 +22,12 @@ namespace GameOfLife.Simulation
         private readonly bool[] doesClusterTouchSmallerEnemy;
         private readonly bool[] isClusterInTouchingList;
         private readonly int[] touchingClusterIds;
+        private readonly List<int> convertedCellIndices;
+        private readonly bool[] isCellInConvertedList;
         private int clusterCount;
+
+        /// <summary>Every cell the last ResolveAbsorptions gave to a new owner, each listed once, in the order they changed.</summary>
+        public IReadOnlyList<int> ConvertedCellIndices => convertedCellIndices;
 
         /// <summary>Allocates every labelling and flood-fill buffer for the largest allowed grid up front so resolving never allocates.</summary>
         public ClusterAbsorber(int maximumCellCount)
@@ -44,9 +50,11 @@ namespace GameOfLife.Simulation
             doesClusterTouchSmallerEnemy = new bool[maximumClusterCount];
             isClusterInTouchingList = new bool[maximumClusterCount];
             touchingClusterIds = new int[maximumClusterCount];
+            convertedCellIndices = new List<int>(maximumCellCount);
+            isCellInConvertedList = new bool[maximumCellCount];
         }
 
-        /// <summary>Converts smaller touching enemy clusters, largest absorber first, until stable, and returns how many cells changed owner.</summary>
+        /// <summary>Converts smaller touching enemy clusters, largest absorber first, until stable, records which cells changed in ConvertedCellIndices, and returns how many cells changed owner.</summary>
         public int ResolveAbsorptions(CellGrid grid)
         {
             if (grid == null)
@@ -59,6 +67,7 @@ namespace GameOfLife.Simulation
                 throw new ArgumentException($"A grid of {grid.CellCount} cells does not fit in {maximumCellCount} cells.", nameof(grid));
             }
 
+            ForgetConvertedCells();
             LabelClusters(grid);
             var convertedCellCount = 0;
             var absorbingClusterId = FindAbsorbingCluster();
@@ -71,6 +80,17 @@ namespace GameOfLife.Simulation
             }
 
             return convertedCellCount;
+        }
+
+        /// <summary>Empties ConvertedCellIndices, such as when a new match begins.</summary>
+        public void ForgetConvertedCells()
+        {
+            for (var listPosition = 0; listPosition < convertedCellIndices.Count; listPosition++)
+            {
+                isCellInConvertedList[convertedCellIndices[listPosition]] = false;
+            }
+
+            convertedCellIndices.Clear();
         }
 
         /// <summary>Splits the living cells into maximal same-owner clusters joined by 8-way adjacency and flags each one that touches a smaller enemy.</summary>
@@ -234,6 +254,11 @@ namespace GameOfLife.Simulation
             for (var cellIndex = clusterFirstCells[clusterId]; cellIndex != NoCell; cellIndex = nextCellInCluster[cellIndex])
             {
                 grid.SetOwner(cellIndex, newOwner);
+                if (!isCellInConvertedList[cellIndex])
+                {
+                    isCellInConvertedList[cellIndex] = true;
+                    convertedCellIndices.Add(cellIndex);
+                }
             }
 
             clusterOwners[clusterId] = newOwner;

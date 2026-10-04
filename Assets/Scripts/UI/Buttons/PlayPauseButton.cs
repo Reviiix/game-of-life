@@ -29,9 +29,10 @@ namespace GameOfLife.UI.Buttons
             gameModeDirector.TogglePlayPause();
         }
 
-        /// <summary>Stops listening for activity changes when destroyed.</summary>
-        private void OnDestroy()
+        /// <summary>Stops listening for activity changes and removes the press tweens when destroyed.</summary>
+        protected override void OnDestroy()
         {
+            base.OnDestroy();
             if (gameModeDirector)
             {
                 gameModeDirector.SimulationActivityChanged -= ShowIconForSimulationActivity;

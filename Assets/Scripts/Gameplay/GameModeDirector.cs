@@ -4,6 +4,7 @@ using GameOfLife.Configuration;
 using GameOfLife.Gameplay.Modes;
 using GameOfLife.Grid;
 using GameOfLife.Simulation;
+using GameOfLife.Theming;
 using GameOfLife.UI.Screens;
 using UnityEngine;
 
@@ -28,16 +29,16 @@ namespace GameOfLife.Gameplay
         public event Action<bool> SimulationActivityChanged;
 
         /// <summary>Allocates the board at its largest size, prepares every mode and starts the first one behind the main menu.</summary>
-        public void Initialise(GameSettings settings, GameOptions gameOptions, ScreenNavigator navigator, AudioManager audio)
+        public void Initialise(GameSettings settings, GameOptions gameOptions, ScreenNavigator navigator, AudioManager audio, ThemeService theme)
         {
             options = gameOptions;
             screens = navigator;
             var grid = new CellGrid(settings.MaximumRows, settings.MaximumColumns);
-            gridView.Initialise(settings);
-            gridView.SetGridLinesVisible(options.GridLinesVisible);
-            countdownDisplay.Initialise(settings, audio);
+            gridView.Initialise(settings, theme, options.GridHighlightsVisible);
+            gridView.LimitCellAnimationsTo(options.EvolutionInterval);
+            countdownDisplay.Initialise(settings, audio, theme);
 
-            var context = new GameModeContext(settings, options, navigator, grid, gridView, countdownDisplay, audio);
+            var context = new GameModeContext(settings, options, navigator, grid, gridView, countdownDisplay, audio, theme);
             foreach (var mode in modes)
             {
                 mode.Initialise(context);
@@ -47,7 +48,8 @@ namespace GameOfLife.Gameplay
             gridTouchInput.CellTapped += ForwardCellTap;
             options.GridSizeChanged += ForwardGridSizeChange;
             options.MatchRulesChanged += ForwardMatchRulesChange;
-            options.GridLinesVisibilityChanged += gridView.SetGridLinesVisible;
+            options.GridHighlightsVisibilityChanged += gridView.SetHighlightsVisible;
+            options.EvolutionIntervalChanged += gridView.LimitCellAnimationsTo;
             SwitchTo(modes[0]);
         }
 
@@ -105,7 +107,8 @@ namespace GameOfLife.Gameplay
             {
                 options.GridSizeChanged -= ForwardGridSizeChange;
                 options.MatchRulesChanged -= ForwardMatchRulesChange;
-                options.GridLinesVisibilityChanged -= gridView.SetGridLinesVisible;
+                options.GridHighlightsVisibilityChanged -= gridView.SetHighlightsVisible;
+                options.EvolutionIntervalChanged -= gridView.LimitCellAnimationsTo;
             }
         }
 
