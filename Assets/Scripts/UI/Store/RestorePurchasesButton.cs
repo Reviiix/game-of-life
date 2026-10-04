@@ -30,9 +30,10 @@ namespace GameOfLife.UI.Store
             purchaseManager.RestorePurchases();
         }
 
-        /// <summary>Stops listening when destroyed.</summary>
-        private void OnDestroy()
+        /// <summary>Stops listening and removes the press tweens when destroyed.</summary>
+        protected override void OnDestroy()
         {
+            base.OnDestroy();
             if (purchaseManager)
             {
                 purchaseManager.StoreStateChanged -= RefreshInteractable;

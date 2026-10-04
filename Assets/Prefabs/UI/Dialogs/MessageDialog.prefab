@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 3491726407803367741}
   - component: {fileID: 2018470431761053639}
   - component: {fileID: 5370480366472144516}
+  - component: {fileID: 7051074413666361412}
   m_Layer: 5
   m_Name: Message
   m_TagString: Untagged
@@ -27,10 +28,10 @@ RectTransform:
   m_GameObject: {fileID: 440474063994055204}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.9, y: 0.9, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 8692787422419683698}
+  m_Father: {fileID: 7070350090106382212}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
@@ -75,7 +76,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4278190080
-  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
+  m_fontColor: {r: 0.06666667, g: 0.06666667, b: 0.06666667, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -92,20 +93,20 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 75
-  m_fontSizeBase: 36
+  m_fontSize: 42
+  m_fontSizeBase: 42
   m_fontWeight: 400
-  m_enableAutoSizing: 1
+  m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 75
-  m_fontStyle: 17
+  m_fontStyle: 16
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
-  m_characterSpacing: 0
+  m_characterSpacing: 2
   m_characterHorizontalScale: 1
   m_wordSpacing: 0
-  m_lineSpacing: 0
+  m_lineSpacing: 10
   m_lineSpacingMax: 0
   m_paragraphSpacing: 0
   m_charWidthMaxAdj: 0
@@ -137,6 +138,20 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &7051074413666361412
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 440474063994055204}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bdb2af8c456ba4101b7743c2760f280c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GameOfLife::GameOfLife.Theming.ThemedGraphic
+  colour: 3
+  opacity: 1
 --- !u!1001 &8119443053930090157
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -236,8 +251,8 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
-    - targetCorrespondingSourceObject: {fileID: 580104993110689759, guid: 1dd959357d61f47e8b3a2478cb88242b, type: 3}
-      insertIndex: -1
+    - targetCorrespondingSourceObject: {fileID: 1346826436303202601, guid: 1dd959357d61f47e8b3a2478cb88242b, type: 3}
+      insertIndex: 0
       addedObject: {fileID: 3491726407803367741}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 7883858305759266448, guid: 1dd959357d61f47e8b3a2478cb88242b, type: 3}
@@ -262,8 +277,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: GameOfLife::GameOfLife.UI.Screens.MessagePanel
   messageLabel: {fileID: 5370480366472144516}
---- !u!224 &8692787422419683698 stripped
+--- !u!224 &7070350090106382212 stripped
 RectTransform:
-  m_CorrespondingSourceObject: {fileID: 580104993110689759, guid: 1dd959357d61f47e8b3a2478cb88242b, type: 3}
+  m_CorrespondingSourceObject: {fileID: 1346826436303202601, guid: 1dd959357d61f47e8b3a2478cb88242b, type: 3}
   m_PrefabInstance: {fileID: 8119443053930090157}
   m_PrefabAsset: {fileID: 0}

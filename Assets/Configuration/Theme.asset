@@ -1,0 +1,104 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d170fc0b3b0d416abffa46b5a61a429, type: 3}
+  m_Name: Theme
+  m_EditorClassIdentifier: GameOfLife::GameOfLife.Theming.Theme
+  lightPalette:
+    background: {r: 1, g: 1, b: 1, a: 1}
+    surface: {r: 0.9529412, g: 0.9529412, b: 0.9529412, a: 1}
+    surfaceStrong: {r: 0.92941177, g: 0.92941177, b: 0.92941177, a: 1}
+    raised: {r: 1, g: 1, b: 1, a: 1}
+    ink: {r: 0.06666667, g: 0.06666667, b: 0.06666667, a: 1}
+    inkMuted: {r: 0.5568628, g: 0.5568628, b: 0.5568628, a: 1}
+    inkInverse: {r: 1, g: 1, b: 1, a: 1}
+    player: {r: 0, g: 0.4, b: 1, a: 1}
+    opponent: {r: 0.9019608, g: 0.14901961, b: 0.14901961, a: 1}
+    danger: {r: 0.9019608, g: 0.14901961, b: 0.14901961, a: 1}
+    scrim: {r: 0, g: 0, b: 0, a: 0.45}
+    shade: {r: 0, g: 0, b: 0, a: 0.07}
+  darkPalette:
+    background: {r: 0.05882353, g: 0.05882353, b: 0.0627451, a: 1}
+    surface: {r: 0.10980392, g: 0.10980392, b: 0.11764706, a: 1}
+    surfaceStrong: {r: 0.16078432, g: 0.16078432, b: 0.17254902, a: 1}
+    raised: {r: 0.12156863, g: 0.12156863, b: 0.13333334, a: 1}
+    ink: {r: 0.9490196, g: 0.9490196, b: 0.9490196, a: 1}
+    inkMuted: {r: 0.5568628, g: 0.5568628, b: 0.5764706, a: 1}
+    inkInverse: {r: 0.05882353, g: 0.05882353, b: 0.0627451, a: 1}
+    player: {r: 0.23921569, g: 0.54509807, b: 1, a: 1}
+    opponent: {r: 1, g: 0.32156864, b: 0.32156864, a: 1}
+    danger: {r: 1, g: 0.32156864, b: 0.32156864, a: 1}
+    scrim: {r: 0, g: 0, b: 0, a: 0.6}
+    shade: {r: 1, g: 1, b: 1, a: 0.06}
+  tileGap: 0.14
+  tileRoundness: 0.45
+  cellAppear:
+    duration: 0.32
+    ease: 27
+    overshootOrAmplitude: 1.70158
+    period: 0
+  cellDisappear:
+    duration: 0.24
+    ease: 26
+    overshootOrAmplitude: 1.70158
+    period: 0
+  cellConvert:
+    duration: 0.6
+    ease: 24
+    overshootOrAmplitude: 1
+    period: 0.2
+  convertSquashScale: 0.5
+  convertColourShare: 0.3
+  cellMotionShareOfGeneration: 0.9
+  screenShow:
+    duration: 0.4
+    ease: 27
+    overshootOrAmplitude: 1.4
+    period: 0
+  screenShowStartScale: 0.94
+  screenStaggerDelay: 0.045
+  screenHide:
+    duration: 0.14
+    ease: 5
+    overshootOrAmplitude: 1.70158
+    period: 0
+  buttonSqueeze:
+    duration: 0.09
+    ease: 6
+    overshootOrAmplitude: 1.70158
+    period: 0
+  buttonPressedScale: 0.92
+  buttonRelease:
+    duration: 0.45
+    ease: 24
+    overshootOrAmplitude: 3
+    period: 0.18
+  switchSlide:
+    duration: 0.28
+    ease: 27
+    overshootOrAmplitude: 1.70158
+    period: 0
+  labelPop:
+    duration: 0.35
+    ease: 27
+    overshootOrAmplitude: 2.5
+    period: 0
+  labelPopScale: 1.3
+  paletteCrossfade:
+    duration: 0.35
+    ease: 4
+    overshootOrAmplitude: 1.70158
+    period: 0
+  startupFade:
+    duration: 1
+    ease: 4
+    overshootOrAmplitude: 1.70158
+    period: 0

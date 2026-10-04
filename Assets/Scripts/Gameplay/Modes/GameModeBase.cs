@@ -65,8 +65,8 @@ namespace GameOfLife.Gameplay.Modes
         {
         }
 
-        /// <summary>Returns the colour to draw a cell in after its owner changed.</summary>
-        protected abstract Color32 GetCellColour(int cellIndex);
+        /// <summary>Stages how the board should draw a cell after its owner changed.</summary>
+        protected abstract void PaintCell(int cellIndex);
 
         /// <summary>Returns a wait for the chosen evolution interval, rebuilt only when the interval has changed since the last call.</summary>
         protected WaitForSeconds GetDelayBetweenGenerations()
@@ -86,10 +86,10 @@ namespace GameOfLife.Gameplay.Modes
         {
             var grid = Context.Grid;
             grid.Resize(Context.Options.Rows, Context.Options.Columns);
-            Context.GridView.Resize(grid.Rows, grid.Columns, Context.Settings.DeadCellColour);
+            Context.GridView.Resize(grid.Rows, grid.Columns);
         }
 
-        /// <summary>Redraws only the cells whose owner changed since the last repaint, then forgets those changes; returns false and uploads nothing when nothing changed.</summary>
+        /// <summary>Redraws only the cells whose owner changed since the last repaint, animating each change, then forgets those changes; returns false and uploads nothing when nothing changed.</summary>
         protected bool RepaintChangedCells()
         {
             var grid = Context.Grid;
@@ -101,11 +101,10 @@ namespace GameOfLife.Gameplay.Modes
 
             for (var changeIndex = 0; changeIndex < changedCellIndices.Count; changeIndex++)
             {
-                var cellIndex = changedCellIndices[changeIndex];
-                Context.GridView.SetCellColour(cellIndex, GetCellColour(cellIndex));
+                PaintCell(changedCellIndices[changeIndex]);
             }
 
-            Context.GridView.ApplyCellColours();
+            Context.GridView.ApplyPaintedCells();
             grid.ClearChangedCells();
             return true;
         }

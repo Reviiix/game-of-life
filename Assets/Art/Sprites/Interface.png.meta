@@ -1,19 +1,43 @@
 fileFormatVersion: 2
-guid: 0578b5dd628b54ed2bb58be482a47827
+guid: 36a5e5fcf8af94603a0d1da20a525ae8
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 1161201145128540330
-    second: Icons_0
+      213: 3093045374630344526
+    second: Interface_0
   - first:
-      213: 2130535880278150251
-    second: Icons_1
+      213: 6166191105313548921
+    second: Interface_1
   - first:
-      213: 184950751378207249
-    second: Icons_2
+      213: 6645267774847150050
+    second: Interface_2
   - first:
-      213: 1202984965197363600
-    second: Icons_3
+      213: 6489428544528313055
+    second: Interface_3
+  - first:
+      213: -159245420439134157
+    second: Interface_4
+  - first:
+      213: 9162267596532196578
+    second: Interface_5
+  - first:
+      213: -6087873826881956765
+    second: Interface_6
+  - first:
+      213: 8004920879445932023
+    second: Interface_7
+  - first:
+      213: -3906201513680891111
+    second: Interface_8
+  - first:
+      213: -8634539977682777084
+    second: Interface_9
+  - first:
+      213: 3296059887323227081
+    second: Interface_10
+  - first:
+      213: 8868692744463474885
+    second: Interface_11
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -57,12 +81,12 @@ TextureImporter:
   compressionQuality: 50
   spriteMode: 2
   spriteExtrude: 1
-  spriteMeshType: 1
+  spriteMeshType: 0
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
-  spriteGenerateFallbackPhysicsShape: 1
+  spriteGenerateFallbackPhysicsShape: 0
   alphaUsage: 1
   alphaIsTransparency: 1
   spriteTessellationDetail: -1
@@ -111,7 +135,7 @@ TextureImporter:
     resizeAlgorithm: 0
     textureFormat: 48
     textureCompression: 1
-    compressionQuality: 100
+    compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
     overridden: 1
@@ -137,7 +161,7 @@ TextureImporter:
     resizeAlgorithm: 0
     textureFormat: 48
     textureCompression: 1
-    compressionQuality: 100
+    compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
     overridden: 1
@@ -148,89 +172,155 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Icons_0
+      name: RoundedPanel
       rect:
         serializedVersion: 2
-        x: 12
-        y: 512
-        width: 476
-        height: 476
+        x: 0
+        y: 256
+        width: 256
+        height: 256
       alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 96, y: 96, z: 96, w: 96}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: aa8d9280a4a6d1010800000000000000
-      internalID: 1161201145128540330
+      spriteID: 936ddf8463b2b44358d2ee9d7b2ca70e
+      internalID: -1682877635
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Icons_1
+      name: Circle
+      rect:
+        serializedVersion: 2
+        x: 256
+        y: 256
+        width: 256
+        height: 256
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 460b05b0424dc4e229dc799bf0efe090
+      internalID: -1434283915
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ParticleTile
       rect:
         serializedVersion: 2
         x: 512
-        y: 512
-        width: 476
-        height: 476
+        y: 384
+        width: 128
+        height: 128
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: b6c0435581f219d10800000000000000
-      internalID: 2130535880278150251
+      spriteID: 0016eda7825524e34baa595311ffaa6e
+      internalID: -1780068195
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Icons_2
+      name: IconPlay
       rect:
         serializedVersion: 2
-        x: 12
-        y: 12
-        width: 476
-        height: 476
+        x: 640
+        y: 320
+        width: 192
+        height: 192
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: 112f6dc7ab3119200800000000000000
-      internalID: 184950751378207249
+      spriteID: 1cd34dd9628c441a183510453ce33a08
+      internalID: -1950569899
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Icons_3
+      name: IconPause
       rect:
         serializedVersion: 2
-        x: 512
-        y: 12
-        width: 476
-        height: 476
+        x: 832
+        y: 320
+        width: 192
+        height: 192
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: 09979b0c37cd1b010800000000000000
-      internalID: 1202984965197363600
+      spriteID: f7c031d080f254453bb71e3b4eaffec7
+      internalID: -782841096
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IconReset
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 64
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: be59241bdda3048b4ba1b58012a2f949
+      internalID: -731742841
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IconMenu
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 64
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 17cb4f72e2411455598d5c0c68eb36be
+      internalID: 1772939516
       vertices: []
       indices: 
       edges: []
@@ -239,7 +329,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: 0e7e42668ddff4d73bbb9d3aa5e19a14
     internalID: 0
     vertices: []
     indices: 
@@ -249,10 +339,13 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Icons_0: 1161201145128540330
-      Icons_1: 2130535880278150251
-      Icons_2: 184950751378207249
-      Icons_3: 1202984965197363600
+      Circle: -1434283915
+      IconMenu: 1772939516
+      IconPause: -782841096
+      IconPlay: -1950569899
+      IconReset: -731742841
+      ParticleTile: -1780068195
+      RoundedPanel: -1682877635
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

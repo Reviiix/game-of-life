@@ -5,29 +5,33 @@ using UnityEngine;
 
 namespace GameOfLife.Gameplay
 {
-    /// <summary>The values the player has chosen in Settings, starting from GameSettings and shared by every game mode; the audio toggles are remembered between launches.</summary>
+    /// <summary>The values the player has chosen in Settings, starting from GameSettings and shared by every game mode; the audio and dark mode toggles are remembered between launches.</summary>
     public sealed class GameOptions
     {
         private const string MusicEnabledKey = "Options.MusicEnabled";
         private const string SoundEffectsEnabledKey = "Options.SoundEffectsEnabled";
+        private const string DarkModeEnabledKey = "Options.DarkModeEnabled";
 
         public int Rows { get; private set; }
         public int Columns { get; private set; }
         public float EvolutionInterval { get; private set; }
         public bool RandomColoursEnabled { get; private set; }
-        public bool GridLinesVisible { get; private set; }
+        public bool GridHighlightsVisible { get; private set; }
         public int VersusSetupSquares { get; private set; }
         public int VersusMatchSquares { get; private set; }
         public int VersusMatchSeconds { get; private set; }
         public OpponentDifficulty OpponentDifficulty { get; private set; }
         public bool MusicEnabled { get; private set; }
         public bool SoundEffectsEnabled { get; private set; }
+        public bool DarkModeEnabled { get; private set; }
 
         public event Action GridSizeChanged;
-        public event Action<bool> GridLinesVisibilityChanged;
+        public event Action<float> EvolutionIntervalChanged;
+        public event Action<bool> GridHighlightsVisibilityChanged;
         public event Action MatchRulesChanged;
         public event Action<bool> MusicEnabledChanged;
         public event Action<bool> SoundEffectsEnabledChanged;
+        public event Action<bool> DarkModeEnabledChanged;
 
         /// <summary>Starts every option at its GameSettings value.</summary>
         public GameOptions(GameSettings settings)
@@ -36,13 +40,14 @@ namespace GameOfLife.Gameplay
             Columns = settings.StartingColumns;
             EvolutionInterval = settings.StartingEvolutionInterval;
             RandomColoursEnabled = settings.RandomColoursEnabledOnStart;
-            GridLinesVisible = settings.GridLinesVisibleOnStart;
+            GridHighlightsVisible = settings.GridHighlightsVisibleOnStart;
             VersusSetupSquares = settings.StartingSetupSquares;
             VersusMatchSquares = settings.StartingMatchSquares;
             VersusMatchSeconds = settings.StartingMatchSeconds;
             OpponentDifficulty = settings.OpponentDifficultyOnStart;
             MusicEnabled = LoadSavedToggle(MusicEnabledKey, settings.MusicEnabledOnStart);
             SoundEffectsEnabled = LoadSavedToggle(SoundEffectsEnabledKey, settings.SoundEffectsEnabledOnStart);
+            DarkModeEnabled = LoadSavedToggle(DarkModeEnabledKey, settings.DarkModeEnabledOnStart);
         }
 
         /// <summary>Turns the background music on or off.</summary>
@@ -59,6 +64,14 @@ namespace GameOfLife.Gameplay
             SoundEffectsEnabled = enabled;
             SaveToggle(SoundEffectsEnabledKey, enabled);
             SoundEffectsEnabledChanged?.Invoke(enabled);
+        }
+
+        /// <summary>Switches between the light and dark palettes.</summary>
+        public void SetDarkModeEnabled(bool enabled)
+        {
+            DarkModeEnabled = enabled;
+            SaveToggle(DarkModeEnabledKey, enabled);
+            DarkModeEnabledChanged?.Invoke(enabled);
         }
 
         /// <summary>Sets the row count and tells the active mode to rebuild its board.</summary>
@@ -79,6 +92,7 @@ namespace GameOfLife.Gameplay
         public void SetEvolutionInterval(float seconds)
         {
             EvolutionInterval = seconds;
+            EvolutionIntervalChanged?.Invoke(seconds);
         }
 
         /// <summary>Turns random colours for classic mode on or off.</summary>
@@ -87,11 +101,11 @@ namespace GameOfLife.Gameplay
             RandomColoursEnabled = enabled;
         }
 
-        /// <summary>Shows or hides the lines between cells.</summary>
-        public void SetGridLinesVisible(bool visible)
+        /// <summary>Shows or hides the faint tiles that mark empty cells.</summary>
+        public void SetGridHighlightsVisible(bool visible)
         {
-            GridLinesVisible = visible;
-            GridLinesVisibilityChanged?.Invoke(visible);
+            GridHighlightsVisible = visible;
+            GridHighlightsVisibilityChanged?.Invoke(visible);
         }
 
         /// <summary>Sets how many squares each side places during Versus setup; a match still in setup restarts with it.</summary>

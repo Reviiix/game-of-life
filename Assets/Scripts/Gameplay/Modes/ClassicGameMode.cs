@@ -1,6 +1,7 @@
 using System.Collections;
 using GameOfLife.Audio;
 using GameOfLife.Core;
+using GameOfLife.Grid;
 using GameOfLife.Simulation;
 using UnityEngine;
 
@@ -72,15 +73,22 @@ namespace GameOfLife.Gameplay.Modes
             ResetBoardToChosenSize();
         }
 
-        /// <summary>Draws living cells in the alive colour, or a fresh random colour when random colours are on.</summary>
-        protected override Color32 GetCellColour(int cellIndex)
+        /// <summary>Draws living cells in the theme's ink, or a fresh random colour when random colours are on.</summary>
+        protected override void PaintCell(int cellIndex)
         {
+            var gridView = Context.GridView;
             if (!Context.Grid.IsAlive(cellIndex))
             {
-                return Context.Settings.DeadCellColour;
+                gridView.PaintCell(cellIndex, CellPaint.Empty);
             }
-
-            return Context.Options.RandomColoursEnabled ? RandomColour.CreateOpaque() : Context.Settings.AliveCellColour;
+            else if (Context.Options.RandomColoursEnabled)
+            {
+                gridView.PaintCell(cellIndex, RandomColour.CreateOpaque());
+            }
+            else
+            {
+                gridView.PaintCell(cellIndex, CellPaint.Ink);
+            }
         }
 
         /// <summary>Plays the countdown, then advances one generation per interval until paused.</summary>

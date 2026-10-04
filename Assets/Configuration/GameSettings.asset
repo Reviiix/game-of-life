@@ -17,55 +17,25 @@ MonoBehaviour:
   maximumColumns: 30
   startingRows: 24
   startingColumns: 12
-  aliveCellColour:
-    serializedVersion: 2
-    rgba: 4278190080
-  deadCellColour:
-    serializedVersion: 2
-    rgba: 4294967295
-  gridLineColour:
-    serializedVersion: 2
-    rgba: 4278190080
-  gridLineThickness: 5
-  gridLinesVisibleOnStart: 1
+  gridHighlightsVisibleOnStart: 1
   randomColoursEnabledOnStart: 0
+  darkModeEnabledOnStart: 0
   countdownSeconds: 1
   minimumEvolutionInterval: 0.1
   maximumEvolutionInterval: 5
   startingEvolutionInterval: 1
-  startupFadeDuration: 1
-  buttonPressDuration: 0.5
-  buttonPressScale:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 0.5
-      value: 1.2
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
+  musicEnabledOnStart: 1
+  soundEffectsEnabledOnStart: 1
+  minimumSetupSquares: 5
+  maximumSetupSquares: 50
+  startingSetupSquares: 20
+  minimumMatchSquares: 0
+  maximumMatchSquares: 20
+  startingMatchSquares: 5
+  minimumMatchSeconds: 15
+  maximumMatchSeconds: 180
+  startingMatchSeconds: 60
+  opponentDifficultyOnStart: 0
+  opponentTurnDelay: 0.35
+  adPassProductId: ad_pass
   targetFrameRate: 60

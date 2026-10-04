@@ -1,5 +1,7 @@
 using System.Collections;
 using GameOfLife.Audio;
+using GameOfLife.Effects;
+using GameOfLife.Grid;
 using GameOfLife.Opponents;
 using GameOfLife.Simulation;
 using GameOfLife.UI.Versus;
@@ -17,6 +19,8 @@ namespace GameOfLife.Gameplay.Modes
 
         [SerializeField] private VersusHud hud;
         [SerializeField] private MatchResultPanel matchResultPanel;
+        [Tooltip("Bursts particles from absorbed cells; it sits on the board so it moves with it.")]
+        [SerializeField] private AbsorptionEffect absorptionEffect;
         [Tooltip("The area between the HUD and the button bar; the board moves here during Versus so every cell can be tapped.")]
         [SerializeField] private RectTransform boardArea;
 
@@ -53,7 +57,8 @@ namespace GameOfLife.Gameplay.Modes
             hardOpponent = OpponentStrategyFactory.Create(OpponentDifficulty.Hard, new System.Random(seeds.Next()), settings.MaximumRows, settings.MaximumColumns);
             opponentMoveSearch = new OpponentMoveSearch(settings.MaximumRows, settings.MaximumColumns);
             opponentTurnDelay = new WaitForSeconds(settings.OpponentTurnDelay);
-            hud.Initialise(settings);
+            hud.Initialise(settings, Context.Theme.Theme);
+            absorptionEffect.Initialise(Context.GridView, Context.Theme);
         }
 
         /// <summary>Moves the board between the HUD and the button bar, shows the HUD and starts a new match; the menu has always just closed.</summary>
@@ -73,6 +78,7 @@ namespace GameOfLife.Gameplay.Modes
         public override void Exit()
         {
             StopAllMatchRoutines();
+            absorptionEffect.Clear();
             phase = VersusGamePhase.Finished;
             SetSimulationActive(false);
             hud.HideOpponentHalfShade();
@@ -84,6 +90,7 @@ namespace GameOfLife.Gameplay.Modes
         public override void Restart()
         {
             StopAllMatchRoutines();
+            absorptionEffect.Clear();
             ResetBoardToChosenSize();
             var options = Context.Options;
             match.Begin(new VersusMatchRules(options.VersusSetupSquares, options.VersusMatchSquares));
@@ -101,7 +108,8 @@ namespace GameOfLife.Gameplay.Modes
                 if (match.SideToPlace == CellOwner.Player && match.TryPlace(CellOwner.Player, cellIndex))
                 {
                     RepaintChangedCells();
-                    PlayPlacementSounds(SoundEffect.CellPlaced, cellIndex);
+                    PlayPlacementSound(SoundEffect.CellPlaced, cellIndex);
+                    CelebrateAbsorptions();
                     ContinueSetup();
                 }
 
@@ -111,7 +119,8 @@ namespace GameOfLife.Gameplay.Modes
             if (phase == VersusGamePhase.Running && match.TryPlace(CellOwner.Player, cellIndex))
             {
                 RepaintChangedCells();
-                PlayPlacementSounds(SoundEffect.CellPlaced, cellIndex);
+                PlayPlacementSound(SoundEffect.CellPlaced, cellIndex);
+                CelebrateAbsorptions();
                 RefreshHud();
                 EndMatchIfDecided();
             }
@@ -176,16 +185,22 @@ namespace GameOfLife.Gameplay.Modes
         }
 
         /// <summary>Draws each cell in its owner's colour.</summary>
-        protected override Color32 GetCellColour(int cellIndex)
+        protected override void PaintCell(int cellIndex)
         {
-            switch (Context.Grid.GetOwner(cellIndex))
+            Context.GridView.PaintCell(cellIndex, GetPaint(Context.Grid.GetOwner(cellIndex)));
+        }
+
+        /// <summary>Returns the board paint for a cell owner.</summary>
+        private static CellPaint GetPaint(CellOwner owner)
+        {
+            switch (owner)
             {
                 case CellOwner.Player:
-                    return Context.Settings.PlayerCellColour;
+                    return CellPaint.Player;
                 case CellOwner.Opponent:
-                    return Context.Settings.OpponentCellColour;
+                    return CellPaint.Opponent;
                 default:
-                    return Context.Settings.DeadCellColour;
+                    return CellPaint.Empty;
             }
         }
 
@@ -238,7 +253,7 @@ namespace GameOfLife.Gameplay.Modes
             {
                 RepaintChangedCells();
                 Context.Audio.Play(SoundEffect.OpponentPlaced);
-                PlayAbsorbSoundIfAnyCellsConverted();
+                CelebrateAbsorptions();
             }
         }
 
@@ -326,7 +341,7 @@ namespace GameOfLife.Gameplay.Modes
                 Context.Audio.Play(SoundEffect.GenerationTick);
             }
 
-            PlayAbsorbSoundIfAnyCellsConverted();
+            CelebrateAbsorptions();
             ShowScores();
             EndMatchIfDecided();
         }
@@ -388,16 +403,10 @@ namespace GameOfLife.Gameplay.Modes
             matchResultPanel.ShowResult(outcome, match.CountCells(CellOwner.Player), match.CountCells(CellOwner.Opponent));
         }
 
-        /// <summary>Plays the player's placement note, then the absorb sound if the placement converted a cluster.</summary>
-        private void PlayPlacementSounds(SoundEffect placementEffect, int cellIndex)
+        /// <summary>After a placement or generation, bursts particles from every converted cell and plays the absorb sound: bright when the player gained cells, lower when the app did.</summary>
+        private void CelebrateAbsorptions()
         {
-            PlayPlacementSound(placementEffect, cellIndex);
-            PlayAbsorbSoundIfAnyCellsConverted();
-        }
-
-        /// <summary>Plays the absorb sound after the last placement or generation converted cells: bright when the player gained them, lower when the app did.</summary>
-        private void PlayAbsorbSoundIfAnyCellsConverted()
-        {
+            absorptionEffect.Play(match.LastConvertedCellIndices, Context.Grid);
             switch (match.LastAbsorbingSide)
             {
                 case CellOwner.Player:

@@ -12,6 +12,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: SettingsButton
       objectReference: {fileID: 0}
+    - target: {fileID: 1134103532084605334, guid: 838e376ddb8b34fa3b10716dad1202e8, type: 3}
+      propertyPath: colour
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1213526918796066402, guid: 838e376ddb8b34fa3b10716dad1202e8, type: 3}
+      propertyPath: colour
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: 1937064225589751596, guid: 838e376ddb8b34fa3b10716dad1202e8, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -92,9 +100,33 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: -3
       objectReference: {fileID: 0}
-    - target: {fileID: 7199106049379648017, guid: 838e376ddb8b34fa3b10716dad1202e8, type: 3}
+    - target: {fileID: 4249059613460033738, guid: 838e376ddb8b34fa3b10716dad1202e8, type: 3}
+      propertyPath: m_Color.b
+      value: 0.9529412
+      objectReference: {fileID: 0}
+    - target: {fileID: 4249059613460033738, guid: 838e376ddb8b34fa3b10716dad1202e8, type: 3}
+      propertyPath: m_Color.g
+      value: 0.9529412
+      objectReference: {fileID: 0}
+    - target: {fileID: 4249059613460033738, guid: 838e376ddb8b34fa3b10716dad1202e8, type: 3}
+      propertyPath: m_Color.r
+      value: 0.9529412
+      objectReference: {fileID: 0}
+    - target: {fileID: 5573809637936069686, guid: 838e376ddb8b34fa3b10716dad1202e8, type: 3}
       propertyPath: m_text
       value: SETTINGS
+      objectReference: {fileID: 0}
+    - target: {fileID: 5573809637936069686, guid: 838e376ddb8b34fa3b10716dad1202e8, type: 3}
+      propertyPath: m_fontColor.b
+      value: 0.06666667
+      objectReference: {fileID: 0}
+    - target: {fileID: 5573809637936069686, guid: 838e376ddb8b34fa3b10716dad1202e8, type: 3}
+      propertyPath: m_fontColor.g
+      value: 0.06666667
+      objectReference: {fileID: 0}
+    - target: {fileID: 5573809637936069686, guid: 838e376ddb8b34fa3b10716dad1202e8, type: 3}
+      propertyPath: m_fontColor.r
+      value: 0.06666667
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

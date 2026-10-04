@@ -1,9 +1,10 @@
 using GameOfLife.Opponents;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace GameOfLife.Configuration
 {
-    /// <summary>Designer-editable values that control grid size, cell appearance, timings and presentation.</summary>
+    /// <summary>Designer-editable values that control grid size, starting options, timings, the store and the frame rate; colours, shapes and every animation live in the Theme.</summary>
     [CreateAssetMenu(fileName = "GameSettings", menuName = "Game of Life/Game Settings")]
     public sealed class GameSettings : ScriptableObject
     {
@@ -17,14 +18,13 @@ namespace GameOfLife.Configuration
         [SerializeField, Min(AbsoluteMinimumGridSize)] private int startingRows = 24;
         [SerializeField, Min(AbsoluteMinimumGridSize)] private int startingColumns = 12;
 
-        [Header("Cell Appearance")]
-        [SerializeField] private Color32 aliveCellColour = new(0, 0, 0, 255);
-        [SerializeField] private Color32 deadCellColour = new(255, 255, 255, 255);
-        [SerializeField] private Color32 gridLineColour = new(0, 0, 0, 255);
-        [Tooltip("Thickness of the lines between cells, in canvas units.")]
-        [SerializeField, Min(0)] private float gridLineThickness = 5f;
-        [SerializeField] private bool gridLinesVisibleOnStart = true;
+        [Header("Appearance")]
+        [Tooltip("Whether the faint tiles marking empty cells show the first time the game runs.")]
+        [FormerlySerializedAs("gridLinesVisibleOnStart")]
+        [SerializeField] private bool gridHighlightsVisibleOnStart = true;
         [SerializeField] private bool randomColoursEnabledOnStart;
+        [Tooltip("Whether dark mode is on the first time the game runs; after that the player's choice is remembered.")]
+        [SerializeField] private bool darkModeEnabledOnStart;
 
         [Header("Timing")]
         [SerializeField, Range(1, MaximumCountdownSeconds)] private int countdownSeconds = 1;
@@ -38,8 +38,6 @@ namespace GameOfLife.Configuration
         [SerializeField] private bool soundEffectsEnabledOnStart = true;
 
         [Header("Versus")]
-        [SerializeField] private Color32 playerCellColour = new(0, 102, 255, 255);
-        [SerializeField] private Color32 opponentCellColour = new(230, 38, 38, 255);
         [SerializeField, Min(1)] private int minimumSetupSquares = 5;
         [SerializeField, Min(1)] private int maximumSetupSquares = 50;
         [SerializeField, Min(1)] private int startingSetupSquares = 20;
@@ -58,10 +56,6 @@ namespace GameOfLife.Configuration
         [SerializeField] private string adPassProductId = "ad_pass";
 
         [Header("Presentation")]
-        [SerializeField, Min(0)] private float startupFadeDuration = 1f;
-        [SerializeField, Min(0.01f)] private float buttonPressDuration = 0.5f;
-        [Tooltip("Button scale over the press animation; time runs from 0 to 1.")]
-        [SerializeField] private AnimationCurve buttonPressScale = new(new Keyframe(0f, 1f), new Keyframe(0.5f, 1.2f), new Keyframe(1f, 1f));
         [SerializeField, Min(30)] private int targetFrameRate = 60;
 
         public int MinimumGridSize => minimumGridSize;
@@ -69,20 +63,15 @@ namespace GameOfLife.Configuration
         public int MaximumColumns => maximumColumns;
         public int StartingRows => startingRows;
         public int StartingColumns => startingColumns;
-        public Color32 AliveCellColour => aliveCellColour;
-        public Color32 DeadCellColour => deadCellColour;
-        public Color32 GridLineColour => gridLineColour;
-        public float GridLineThickness => gridLineThickness;
-        public bool GridLinesVisibleOnStart => gridLinesVisibleOnStart;
+        public bool GridHighlightsVisibleOnStart => gridHighlightsVisibleOnStart;
         public bool RandomColoursEnabledOnStart => randomColoursEnabledOnStart;
+        public bool DarkModeEnabledOnStart => darkModeEnabledOnStart;
         public int CountdownSeconds => countdownSeconds;
         public float MinimumEvolutionInterval => minimumEvolutionInterval;
         public float MaximumEvolutionInterval => maximumEvolutionInterval;
         public float StartingEvolutionInterval => startingEvolutionInterval;
         public bool MusicEnabledOnStart => musicEnabledOnStart;
         public bool SoundEffectsEnabledOnStart => soundEffectsEnabledOnStart;
-        public Color32 PlayerCellColour => playerCellColour;
-        public Color32 OpponentCellColour => opponentCellColour;
         public int MinimumSetupSquares => minimumSetupSquares;
         public int MaximumSetupSquares => maximumSetupSquares;
         public int StartingSetupSquares => startingSetupSquares;
@@ -95,9 +84,6 @@ namespace GameOfLife.Configuration
         public OpponentDifficulty OpponentDifficultyOnStart => opponentDifficultyOnStart;
         public float OpponentTurnDelay => opponentTurnDelay;
         public string AdPassProductId => adPassProductId;
-        public float StartupFadeDuration => startupFadeDuration;
-        public float ButtonPressDuration => buttonPressDuration;
-        public AnimationCurve ButtonPressScale => buttonPressScale;
         public int TargetFrameRate => targetFrameRate;
 
         /// <summary>Keeps related values consistent whenever they are edited in the Inspector.</summary>

@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 9026023264713199891}
   - component: {fileID: 6264482662086480549}
   - component: {fileID: 3848336100594412092}
+  - component: {fileID: 6248291510947773566}
   m_Layer: 5
   m_Name: Message
   m_TagString: Untagged
@@ -27,10 +28,10 @@ RectTransform:
   m_GameObject: {fileID: 7848706904062389735}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.9, y: 0.9, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 7906361215518383422}
+  m_Father: {fileID: 8576287772172104648}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
@@ -65,7 +66,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: POPULATE ATLEAST ONE CELL  TO START THE GAME.
+  m_text: PLACE AT LEAST ONE CELL TO START THE GAME.
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 42ef9e72371064556a74a7ecea2903d3, type: 2}
   m_sharedMaterial: {fileID: -5462910232755998555, guid: 42ef9e72371064556a74a7ecea2903d3, type: 2}
@@ -75,7 +76,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4278190080
-  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
+  m_fontColor: {r: 0.06666667, g: 0.06666667, b: 0.06666667, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -92,20 +93,20 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 75
-  m_fontSizeBase: 36
+  m_fontSize: 42
+  m_fontSizeBase: 42
   m_fontWeight: 400
-  m_enableAutoSizing: 1
+  m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 75
-  m_fontStyle: 17
+  m_fontStyle: 16
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
-  m_characterSpacing: 0
+  m_characterSpacing: 2
   m_characterHorizontalScale: 1
   m_wordSpacing: 0
-  m_lineSpacing: 0
+  m_lineSpacing: 10
   m_lineSpacingMax: 0
   m_paragraphSpacing: 0
   m_charWidthMaxAdj: 0
@@ -137,6 +138,20 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &6248291510947773566
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7848706904062389735}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bdb2af8c456ba4101b7743c2760f280c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GameOfLife::GameOfLife.Theming.ThemedGraphic
+  colour: 3
+  opacity: 1
 --- !u!1001 &7329040805734980321
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -232,13 +247,13 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
-    - targetCorrespondingSourceObject: {fileID: 580104993110689759, guid: 1dd959357d61f47e8b3a2478cb88242b, type: 3}
-      insertIndex: -1
+    - targetCorrespondingSourceObject: {fileID: 1346826436303202601, guid: 1dd959357d61f47e8b3a2478cb88242b, type: 3}
+      insertIndex: 0
       addedObject: {fileID: 9026023264713199891}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 1dd959357d61f47e8b3a2478cb88242b, type: 3}
---- !u!224 &7906361215518383422 stripped
+--- !u!224 &8576287772172104648 stripped
 RectTransform:
-  m_CorrespondingSourceObject: {fileID: 580104993110689759, guid: 1dd959357d61f47e8b3a2478cb88242b, type: 3}
+  m_CorrespondingSourceObject: {fileID: 1346826436303202601, guid: 1dd959357d61f47e8b3a2478cb88242b, type: 3}
   m_PrefabInstance: {fileID: 7329040805734980321}
   m_PrefabAsset: {fileID: 0}

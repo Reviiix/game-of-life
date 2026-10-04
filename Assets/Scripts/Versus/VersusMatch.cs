@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using GameOfLife.Opponents;
 using GameOfLife.Simulation;
 
@@ -23,6 +24,9 @@ namespace GameOfLife.Versus
         public bool IsSetupComplete { get; private set; }
         public CellOwner LastAbsorbingSide { get; private set; }
 
+        /// <summary>The cells the last placement or generation converted to the other side, each once; empty when nothing was absorbed.</summary>
+        public IReadOnlyList<int> LastConvertedCellIndices => absorber.ConvertedCellIndices;
+
         /// <summary>Wraps the shared grid and absorber in the Finished stage, so nothing can be placed until Begin is called.</summary>
         public VersusMatch(CellGrid grid, ClusterAbsorber absorber)
         {
@@ -45,6 +49,7 @@ namespace GameOfLife.Versus
             Stage = VersusStage.Setup;
             IsSetupComplete = false;
             LastAbsorbingSide = CellOwner.None;
+            absorber.ForgetConvertedCells();
             PassSetupTurn(CellOwner.Player, CellOwner.Opponent);
         }
 
