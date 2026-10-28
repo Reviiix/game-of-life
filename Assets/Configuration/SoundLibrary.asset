@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b98e80f7c22bd4fd0a3876e3a55f54f8, type: 3}
+  m_Name: SoundLibrary
+  m_EditorClassIdentifier: GameOfLife::GameOfLife.Audio.SoundLibrary
+  backgroundMusic: {fileID: 8300000, guid: 4d26cf1e3e97345b8911f1c606141b70, type: 3}
+  musicVolume: 0.4
+  musicFadeInSeconds: 2
+  simultaneousSoundEffects: 8
+  soundEffects:
+  - effect: 0
+    clip: {fileID: 8300000, guid: 48cba40bc6f2a4f89aa79917bbb80d33, type: 3}
+    volume: 0.5
+    minimumSecondsBetweenPlays: 0.03
+  - effect: 1
+    clip: {fileID: 8300000, guid: 390c691bb412740638a267e8beb20c6e, type: 3}
+    volume: 0.35
+    minimumSecondsBetweenPlays: 0.06
+  - effect: 2
+    clip: {fileID: 8300000, guid: deb4c924c90674f20b60887349b31206, type: 3}
+    volume: 0.7
+    minimumSecondsBetweenPlays: 0.02
+  - effect: 3
+    clip: {fileID: 8300000, guid: 956f6f032285f41dfb6e2e82e74b1093, type: 3}
+    volume: 0.5
+    minimumSecondsBetweenPlays: 0.02
+  - effect: 4
+    clip: {fileID: 8300000, guid: 3eb0d568169af4c6f983eb5f29aa62f5, type: 3}
+    volume: 0.6
+    minimumSecondsBetweenPlays: 0
+  - effect: 5
+    clip: {fileID: 8300000, guid: 45aea6ef762fc42c9a0b72048b96b3a8, type: 3}
+    volume: 0.22
+    minimumSecondsBetweenPlays: 0.08
+  - effect: 6
+    clip: {fileID: 8300000, guid: dab85f029de4d424ea4e5cdd0af2a358, type: 3}
+    volume: 0.65
+    minimumSecondsBetweenPlays: 0.1
+  - effect: 7
+    clip: {fileID: 8300000, guid: 8f4c1062db2a14ad5a57db2d35eaef7b, type: 3}
+    volume: 0.6
+    minimumSecondsBetweenPlays: 0
+  - effect: 8
+    clip: {fileID: 8300000, guid: fe8a08ed22b2243a490cfc82debce0db, type: 3}
+    volume: 0.7
+    minimumSecondsBetweenPlays: 0
+  - effect: 9
+    clip: {fileID: 8300000, guid: 8db2567fed35a45df8161bc27b3b93fc, type: 3}
+    volume: 0.6
+    minimumSecondsBetweenPlays: 0.2
+  - effect: 10
+    clip: {fileID: 8300000, guid: 78206209c3ddf4c278e3a88e9cefc0cc, type: 3}
+    volume: 0.8
+    minimumSecondsBetweenPlays: 0
+  - effect: 11
+    clip: {fileID: 8300000, guid: 684ef4ead2c5644e0bfd5019dea03465, type: 3}
+    volume: 0.7
+    minimumSecondsBetweenPlays: 0
+  - effect: 12
+    clip: {fileID: 8300000, guid: 4d792cc56e256482cbed4f574a8ae5c1, type: 3}
+    volume: 0.7
+    minimumSecondsBetweenPlays: 0

@@ -1,9 +1,18 @@
 using System.Collections;
+using DG.Tweening;
+using GameOfLife.Ads;
+using DG.Tweening.Core.Enums;
+using GameOfLife.Audio;
 using GameOfLife.Configuration;
 using GameOfLife.Effects;
 using GameOfLife.Gameplay;
+using GameOfLife.HowToPlay;
+using GameOfLife.Purchasing;
+using GameOfLife.Theming;
 using GameOfLife.UI.Buttons;
+using GameOfLife.UI.HowToPlay;
 using GameOfLife.UI.Screens;
+using GameOfLife.UI.Store;
 using UnityEngine;
 
 namespace GameOfLife.Core
@@ -12,35 +21,74 @@ namespace GameOfLife.Core
     [DefaultExecutionOrder(-1000)]
     public sealed class GameInitialiser : MonoBehaviour
     {
+        private const string AdPassOwnershipStorageKey = "Store.AdPassOwned";
+        private const string GuideSeenStorageKey = "HowToPlay.Seen";
+        private const int TweenerCapacity = 100;
+        private const int SequenceCapacity = 32;
+
         [SerializeField] private GameSettings settings;
+        [SerializeField] private SoundLibrary soundLibrary;
+        [SerializeField] private AdSettings adSettings;
+        [SerializeField] private HowToPlayGuide howToPlayGuide;
+        [SerializeField] private Theme theme;
+        [Tooltip("Clears the screen behind the game in the theme's background colour.")]
+        [SerializeField] private Camera mainCamera;
 
         [Header("Services")]
-        [SerializeField] private GameController gameController;
+        [SerializeField] private GameModeDirector gameModeDirector;
+        [SerializeField] private AudioManager audioManager;
         [SerializeField] private ScreenNavigator screenNavigator;
+        [SerializeField] private PurchaseManager purchaseManager;
+        [SerializeField] private LevelPlayInitialiser levelPlayInitialiser;
+        [SerializeField] private AdManager adManager;
+        [SerializeField] private HowToPlayPanel howToPlayPanel;
 
         [Header("Start-up Dependents")]
         [SerializeField] private SettingsPanel settingsPanel;
         [SerializeField] private PlayPauseButton playPauseButton;
+        [SerializeField] private OpenPatternCatalogueButton patternsButton;
         [SerializeField] private ScreenFader screenFader;
+        [SerializeField] private AdPassButton adPassButton;
+        [SerializeField] private RestorePurchasesButton restorePurchasesButton;
+        [SerializeField] private PurchaseFeedback purchaseFeedback;
 
-        /// <summary>Applies platform settings and registers services before any other script's Awake can run.</summary>
+        private GameOptions options;
+        private AdPassOwnership adPassOwnership;
+        private ThemeService themeService;
+        private FirstRunGuide firstRunGuide;
+
+        /// <summary>Applies platform settings, starts DOTween, creates the player's options and the theme, and registers services before any other script's Awake can run.</summary>
         private void Awake()
         {
             Application.targetFrameRate = settings.TargetFrameRate;
+            DOTween.Init(recycleAllByDefault: false, useSafeMode: true, LogBehaviour.ErrorsOnly).SetCapacity(TweenerCapacity, SequenceCapacity);
+            DOTween.safeModeLogBehaviour = SafeModeLogBehaviour.Error;
+            options = new GameOptions(settings);
+            adPassOwnership = new AdPassOwnership(AdPassOwnershipStorageKey);
+            themeService = new ThemeService(theme, options.DarkModeEnabled, mainCamera);
+            firstRunGuide = new FirstRunGuide(GuideSeenStorageKey);
+            options.DarkModeEnabledChanged += themeService.SetDarkMode;
             RegisterServices();
         }
 
-        /// <summary>Initialises every system in dependency order, waits one frame for load hitches to pass, then fades in.</summary>
+        /// <summary>Initialises every system in dependency order, opens the guide on the very first launch, waits one frame for load hitches to pass, then fades in.</summary>
         private IEnumerator Start()
         {
             InitialiseSystems();
+            firstRunGuide.ShowIfFirstRun(howToPlayPanel);
             yield return null;
-            yield return screenFader.FadeIn(settings.StartupFadeDuration);
+            screenFader.FadeIn(theme.StartupFade);
         }
 
         /// <summary>Empties the service registry so nothing points at destroyed objects after the scene unloads.</summary>
         private void OnDestroy()
         {
+            if (options != null)
+            {
+                options.DarkModeEnabledChanged -= themeService.SetDarkMode;
+            }
+
+            themeService?.Dispose();
             ServiceLocator.Clear();
         }
 
@@ -48,17 +96,32 @@ namespace GameOfLife.Core
         private void RegisterServices()
         {
             ServiceLocator.Register(settings);
-            ServiceLocator.Register(gameController);
+            ServiceLocator.Register(themeService);
+            ServiceLocator.Register(gameModeDirector);
+            ServiceLocator.Register(audioManager);
             ServiceLocator.Register(screenNavigator);
+            ServiceLocator.Register(purchaseManager);
+            ServiceLocator.Register(adPassOwnership);
+            ServiceLocator.Register(adManager);
+            ServiceLocator.Register(howToPlayPanel);
         }
 
         /// <summary>Sets up systems so each one's dependencies are ready before it starts.</summary>
         private void InitialiseSystems()
         {
-            screenNavigator.Initialise();
-            gameController.Initialise(settings, screenNavigator);
-            settingsPanel.Initialise(settings, gameController);
-            playPauseButton.Initialise(gameController);
+            audioManager.Initialise(soundLibrary, options);
+            purchaseManager.Initialise(settings.AdPassProductId, adPassOwnership);
+            screenNavigator.Initialise(theme);
+            gameModeDirector.Initialise(settings, options, screenNavigator, audioManager, themeService, adManager);
+            howToPlayPanel.Initialise(howToPlayGuide, themeService);
+            firstRunGuide.HoldAdsIfFirstRun(adManager);
+            adManager.Initialise(adSettings, levelPlayInitialiser, adPassOwnership, gameModeDirector);
+            settingsPanel.Initialise(settings, options, audioManager, themeService);
+            playPauseButton.Initialise(gameModeDirector);
+            patternsButton.Initialise(gameModeDirector);
+            adPassButton.Initialise(purchaseManager, adPassOwnership);
+            restorePurchasesButton.Initialise(purchaseManager, adPassOwnership);
+            purchaseFeedback.Initialise(purchaseManager, adPassOwnership, audioManager);
         }
     }
 }

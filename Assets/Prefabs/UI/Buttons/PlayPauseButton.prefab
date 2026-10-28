@@ -11,7 +11,7 @@ PrefabInstance:
     - target: {fileID: 3559286521541741191, guid: 774d4b64c5310413684ffd5b0b11d007, type: 3}
       propertyPath: m_Sprite
       value: 
-      objectReference: {fileID: 1161201145128540330, guid: 0578b5dd628b54ed2bb58be482a47827, type: 3}
+      objectReference: {fileID: -1950569899, guid: 36a5e5fcf8af94603a0d1da20a525ae8, type: 3}
     - target: {fileID: 5690795228134271644, guid: 774d4b64c5310413684ffd5b0b11d007, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -121,5 +121,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bfaa6f032faac47f4aeb3b20a868af65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameOfLife.UI.Buttons.PlayPauseButton
-  playIcon: {fileID: 1161201145128540330, guid: 0578b5dd628b54ed2bb58be482a47827, type: 3}
-  pauseIcon: {fileID: 2130535880278150251, guid: 0578b5dd628b54ed2bb58be482a47827, type: 3}
+  playIcon: {fileID: -1950569899, guid: 36a5e5fcf8af94603a0d1da20a525ae8, type: 3}
+  pauseIcon: {fileID: -782841096, guid: 36a5e5fcf8af94603a0d1da20a525ae8, type: 3}

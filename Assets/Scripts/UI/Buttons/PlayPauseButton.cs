@@ -1,11 +1,10 @@
-using GameOfLife.Core;
 using GameOfLife.Gameplay;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace GameOfLife.UI.Buttons
 {
-    /// <summary>Starts or pauses the simulation and shows a play icon while editing and a pause icon otherwise.</summary>
+    /// <summary>Starts or pauses the active mode, showing a pause icon while its simulation is counting down or running.</summary>
     [RequireComponent(typeof(Image))]
     public sealed class PlayPauseButton : AnimatedButton
     {
@@ -13,36 +12,37 @@ namespace GameOfLife.UI.Buttons
         [SerializeField] private Sprite pauseIcon;
 
         private Image iconImage;
-        private GameController gameController;
+        private GameModeDirector gameModeDirector;
 
-        /// <summary>Connects to the game controller and shows the icon for the current phase.</summary>
-        public void Initialise(GameController controller)
+        /// <summary>Connects to the director and shows the icon for the active mode.</summary>
+        public void Initialise(GameModeDirector director)
         {
             iconImage = GetComponent<Image>();
-            gameController = controller;
-            gameController.PhaseChanged += ShowIconForPhase;
-            ShowIconForPhase(gameController.Phase);
+            gameModeDirector = director;
+            gameModeDirector.SimulationActivityChanged += ShowIconForSimulationActivity;
+            ShowIconForSimulationActivity(gameModeDirector.IsSimulationActive);
         }
 
-        /// <summary>Starts or pauses the game.</summary>
+        /// <summary>Starts or pauses the active mode.</summary>
         protected override void OnPressed()
         {
-            gameController.TogglePlayPause();
+            gameModeDirector.TogglePlayPause();
         }
 
-        /// <summary>Stops listening for phase changes when destroyed.</summary>
-        private void OnDestroy()
+        /// <summary>Stops listening for activity changes and removes the press tweens when destroyed.</summary>
+        protected override void OnDestroy()
         {
-            if (gameController)
+            base.OnDestroy();
+            if (gameModeDirector)
             {
-                gameController.PhaseChanged -= ShowIconForPhase;
+                gameModeDirector.SimulationActivityChanged -= ShowIconForSimulationActivity;
             }
         }
 
-        /// <summary>Shows the play icon while editing, otherwise the pause icon.</summary>
-        private void ShowIconForPhase(GamePhase phase)
+        /// <summary>Shows the pause icon while the simulation is active, otherwise the play icon.</summary>
+        private void ShowIconForSimulationActivity(bool simulationActive)
         {
-            iconImage.sprite = phase == GamePhase.Editing ? playIcon : pauseIcon;
+            iconImage.sprite = simulationActive ? pauseIcon : playIcon;
         }
     }
 }

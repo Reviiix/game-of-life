@@ -8,13 +8,25 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2971003457918008156, guid: 774d4b64c5310413684ffd5b0b11d007, type: 3}
+      propertyPath: colour
+      value: 8
+      objectReference: {fileID: 0}
     - target: {fileID: 3559286521541741191, guid: 774d4b64c5310413684ffd5b0b11d007, type: 3}
       propertyPath: m_Sprite
       value: 
-      objectReference: {fileID: 184950751378207249, guid: 0578b5dd628b54ed2bb58be482a47827, type: 3}
+      objectReference: {fileID: -731742841, guid: 36a5e5fcf8af94603a0d1da20a525ae8, type: 3}
+    - target: {fileID: 3559286521541741191, guid: 774d4b64c5310413684ffd5b0b11d007, type: 3}
+      propertyPath: m_Color.b
+      value: 0.14901961
+      objectReference: {fileID: 0}
+    - target: {fileID: 3559286521541741191, guid: 774d4b64c5310413684ffd5b0b11d007, type: 3}
+      propertyPath: m_Color.g
+      value: 0.14901961
+      objectReference: {fileID: 0}
     - target: {fileID: 3559286521541741191, guid: 774d4b64c5310413684ffd5b0b11d007, type: 3}
       propertyPath: m_Color.r
-      value: 1
+      value: 0.9019608
       objectReference: {fileID: 0}
     - target: {fileID: 5690795228134271644, guid: 774d4b64c5310413684ffd5b0b11d007, type: 3}
       propertyPath: m_Pivot.x

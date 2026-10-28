@@ -1,10 +1,11 @@
-using System.Collections;
+using DG.Tweening;
+using GameOfLife.Motion;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace GameOfLife.Effects
 {
-    /// <summary>Full-screen black overlay that hides start-up, fades out, then switches itself off; it blocks taps while visible.</summary>
+    /// <summary>Full-screen black overlay that hides start-up, fades out with the theme's start-up fade, then switches itself off; it blocks taps while visible.</summary>
     [RequireComponent(typeof(Image))]
     public sealed class ScreenFader : MonoBehaviour
     {
@@ -17,17 +18,25 @@ namespace GameOfLife.Effects
             SetOverlayAlpha(1f);
         }
 
-        /// <summary>Fades the overlay from opaque to transparent over the given seconds, then deactivates it.</summary>
-        public IEnumerator FadeIn(float duration)
+        /// <summary>Stops the fade if the overlay is destroyed first.</summary>
+        private void OnDestroy()
         {
-            for (var elapsed = 0f; elapsed < duration; elapsed += Time.unscaledDeltaTime)
-            {
-                SetOverlayAlpha(1f - elapsed / duration);
-                yield return null;
-            }
+            DOTween.Kill(this);
+        }
 
-            SetOverlayAlpha(0f);
-            gameObject.SetActive(false);
+        /// <summary>Fades the overlay from opaque to transparent with the given motion, then deactivates it; runs once at start-up.</summary>
+        public void FadeIn(EasedMotion motion)
+        {
+            var fade = DOTween.To(GetOverlayAlpha, SetOverlayAlpha, 0f, motion.Duration)
+                .SetTarget(this)
+                .OnComplete(Deactivate);
+            motion.ApplyEaseTo(fade);
+        }
+
+        /// <summary>Returns the overlay's alpha for DOTween.</summary>
+        private float GetOverlayAlpha()
+        {
+            return overlay.color.a;
         }
 
         /// <summary>Changes only the overlay's alpha, keeping its colour.</summary>
@@ -36,6 +45,12 @@ namespace GameOfLife.Effects
             var overlayColour = overlay.color;
             overlayColour.a = alpha;
             overlay.color = overlayColour;
+        }
+
+        /// <summary>Switches the faded-out overlay off so it no longer draws or blocks taps.</summary>
+        private void Deactivate()
+        {
+            gameObject.SetActive(false);
         }
     }
 }
