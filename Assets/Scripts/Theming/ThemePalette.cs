@@ -23,8 +23,12 @@ namespace GameOfLife.Theming
         [SerializeField] private Color inkMuted = Color.grey;
         [Tooltip("Text and icons drawn on top of ink, such as primary button labels.")]
         [SerializeField] private Color inkInverse = Color.white;
+        [Tooltip("Your cells in Versus, and blue cells in Classic.")]
         [SerializeField] private Color player = Color.blue;
+        [Tooltip("The app's cells in Versus, and red cells in Classic.")]
         [SerializeField] private Color opponent = Color.red;
+        [Tooltip("Yellow cells, Classic's fourth colour.")]
+        [SerializeField] private Color accent = Color.yellow;
         [Tooltip("Destructive actions such as reset, and the timer's last seconds.")]
         [SerializeField] private Color danger = Color.red;
         [Tooltip("Dims the screen behind dialogs.")]
@@ -61,6 +65,8 @@ namespace GameOfLife.Theming
                     return scrim;
                 case ThemeColour.Shade:
                     return shade;
+                case ThemeColour.Accent:
+                    return accent;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(role), role, null);
             }
@@ -121,6 +127,9 @@ namespace GameOfLife.Theming
                     break;
                 case ThemeColour.Shade:
                     shade = colour;
+                    break;
+                case ThemeColour.Accent:
+                    accent = colour;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(role), role, null);

@@ -9,13 +9,18 @@ namespace GameOfLife.UI.Versus
     [RequireComponent(typeof(Canvas))]
     public sealed class VersusHud : MonoBehaviour
     {
-        private const string PlayerSetupTurnFormat = "YOUR TURN - {0} LEFT";
-        private const string OpponentSetupTurnText = "APP'S TURN";
+        private const string PlayerSetupFormat = "PLACE YOUR SQUARES - {0} LEFT";
+        private const string PlayerSetupOrStartFormat = "{0} LEFT - PLAY TO START";
+        private const string OpponentKeepsPlacingText = "THE APP KEEPS PLACING";
+        private const string OpponentSavedSquaresText = "THE APP SAVED SQUARES TOO";
         private const string PressPlayToStartText = "PRESS PLAY TO START";
         private const string GetReadyText = "GET READY";
         private const string MatchSquaresLeftFormat = "TAP TO PLACE - {0} LEFT";
         private const string PausedText = "PAUSED - PRESS PLAY";
         private const string MatchOverText = "MATCH OVER - PRESS PLAY";
+        private const string PlayerWipedOutFormat = "YOU'RE WIPED OUT - ENDING IN {0}";
+        private const string OpponentWipedOutFormat = "APP WIPED OUT - ENDING IN {0}";
+        private const string BothWipedOutFormat = "BOTH WIPED OUT - ENDING IN {0}";
         private const string PlayerScoreFormat = "YOU {0}";
         private const string OpponentScoreFormat = "APP {0}";
         private const int SecondsPerMinute = 60;
@@ -45,7 +50,7 @@ namespace GameOfLife.UI.Versus
         {
             hudCanvas = GetComponent<Canvas>();
             timerColour = timerLabel.GetComponent<ThemedGraphic>();
-            timerLabels = BuildTimerLabels(settings.MaximumMatchSeconds);
+            timerLabels = BuildTimerLabels(Mathf.Max(settings.MaximumMatchSeconds, settings.MaximumSetupSeconds));
             playerScorePop = new LabelPop(playerScoreLabel.transform, theme);
             opponentScorePop = new LabelPop(opponentScoreLabel.transform, theme);
             timerPop = new LabelPop(timerLabel.transform, theme);
@@ -91,7 +96,7 @@ namespace GameOfLife.UI.Versus
             }
         }
 
-        /// <summary>Shows the match time left as minutes and seconds; in the last seconds it turns to the danger colour and pops as each second passes.</summary>
+        /// <summary>Shows the setup or match time left as minutes and seconds; in the last seconds it turns to the danger colour and pops as each second passes.</summary>
         public void ShowTimeRemaining(int seconds)
         {
             if (seconds == shownSeconds)
@@ -109,16 +114,28 @@ namespace GameOfLife.UI.Versus
             }
         }
 
-        /// <summary>Tells the player it is their setup turn and how many setup squares they have left.</summary>
-        public void ShowPlayerSetupTurn(int squaresLeft)
+        /// <summary>Tells the player how many setup squares they have left to place before the setup time runs out, and that play starts the match once they have placed enough.</summary>
+        public void ShowPlayerSetup(int squaresLeft, bool canStartEarly)
         {
-            statusLabel.SetText(PlayerSetupTurnFormat, squaresLeft);
+            statusLabel.SetText(canStartEarly ? PlayerSetupOrStartFormat : PlayerSetupFormat, squaresLeft);
         }
 
-        /// <summary>Tells the player the app is placing a setup square.</summary>
-        public void ShowOpponentSetupTurn()
+        /// <summary>Shows a pattern-positioning hint in the status line; refreshing the HUD restores the usual status afterwards.</summary>
+        public void ShowPlacementHint(string hint)
         {
-            statusLabel.SetText(OpponentSetupTurnText);
+            statusLabel.SetText(hint);
+        }
+
+        /// <summary>Tells the player, once they are done with setup, that the app is still placing its setup squares.</summary>
+        public void ShowOpponentKeepsPlacing()
+        {
+            statusLabel.SetText(OpponentKeepsPlacingText);
+        }
+
+        /// <summary>Tells the player the app also stopped early and saved squares for the match.</summary>
+        public void ShowOpponentSavedSquares()
+        {
+            statusLabel.SetText(OpponentSavedSquaresText);
         }
 
         /// <summary>Asks the player to press play to start the match.</summary>
@@ -137,6 +154,13 @@ namespace GameOfLife.UI.Versus
         public void ShowMatchSquaresLeft(int squaresLeft)
         {
             statusLabel.SetText(MatchSquaresLeftFormat, squaresLeft);
+        }
+
+        /// <summary>Tells the player which side has no living squares left and how many seconds remain before the match ends, unless that side places one.</summary>
+        public void ShowSideWipedOut(bool playerHasNoCells, bool opponentHasNoCells, int secondsLeft)
+        {
+            var format = playerHasNoCells && opponentHasNoCells ? BothWipedOutFormat : playerHasNoCells ? PlayerWipedOutFormat : OpponentWipedOutFormat;
+            statusLabel.SetText(format, secondsLeft);
         }
 
         /// <summary>Shows that the match is paused.</summary>
@@ -168,7 +192,7 @@ namespace GameOfLife.UI.Versus
             opponentHalfShade.gameObject.SetActive(false);
         }
 
-        /// <summary>Builds "m:ss" labels for every second a match can last, once, so the timer never builds strings during play.</summary>
+        /// <summary>Builds "m:ss" labels for every second setup or a match can last, once, so the timer never builds strings during play.</summary>
         private static string[] BuildTimerLabels(int maximumSeconds)
         {
             var labels = new string[maximumSeconds + 1];

@@ -20,6 +20,8 @@ MonoBehaviour:
   gridHighlightsVisibleOnStart: 1
   randomColoursEnabledOnStart: 0
   darkModeEnabledOnStart: 0
+  menuFormationVerticalCentre: 0.37
+  freshCellGenerations: 3
   countdownSeconds: 1
   minimumEvolutionInterval: 0.1
   maximumEvolutionInterval: 5
@@ -29,6 +31,9 @@ MonoBehaviour:
   minimumSetupSquares: 5
   maximumSetupSquares: 50
   startingSetupSquares: 20
+  minimumSetupSeconds: 10
+  maximumSetupSeconds: 120
+  startingSetupSeconds: 30
   minimumMatchSquares: 0
   maximumMatchSquares: 20
   startingMatchSquares: 5
@@ -37,5 +42,10 @@ MonoBehaviour:
   startingMatchSeconds: 60
   opponentDifficultyOnStart: 0
   opponentTurnDelay: 0.35
+  opponentSetupLookAheadGenerations: 4
+  emptySideEndSeconds: 3
+  randomPlacementBoardShare: 0.3
+  randomPlacementCellsPerPatternChance: 10
+  randomPlacementPatternChance: 0.4
   adPassProductId: ad_pass
   targetFrameRate: 60

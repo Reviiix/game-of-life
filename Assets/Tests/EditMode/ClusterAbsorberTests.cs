@@ -4,13 +4,16 @@ using NUnit.Framework;
 
 namespace GameOfLife.Tests
 {
-    /// <summary>Checks that ClusterAbsorber converts smaller touching enemy clusters in the agreed deterministic order.</summary>
+    /// <summary>Checks that ClusterAbsorber converts smaller touching enemy clusters, of any other colour, in the agreed deterministic order.</summary>
     [TestFixture]
     public sealed class ClusterAbsorberTests
     {
         private const char EmptySymbol = '.';
         private const char PlayerSymbol = 'P';
         private const char OpponentSymbol = 'O';
+        private const char ThirdSymbol = 'T';
+        private const char FourthSymbol = 'F';
+        private const char UnexpectedOwnerSymbol = '?';
 
         /// <summary>A Player cluster converts a smaller Opponent cluster it touches.</summary>
         [Test]
@@ -398,13 +401,103 @@ namespace GameOfLife.Tests
             Assert.That(absorber.ConvertedCellIndices, Is.EqualTo(new[] { grid.ToCellIndex(1, 4) }));
         }
 
+        /// <summary>With Classic's colours any other colour is an enemy, so one cluster converts smaller touching clusters of two different colours in the same resolve.</summary>
+        [Test]
+        public void LargerCluster_AbsorbsSmallerTouchingClustersOfTwoColoursAtOnce()
+        {
+            var grid = CreateGrid(
+                ".........",
+                ".OPPPPTT.",
+                ".........");
+
+            var convertedCellCount = Resolve(grid);
+
+            Assert.That(convertedCellCount, Is.EqualTo(3), "The one Opponent cell and the Third pair should all change owner.");
+            Assert.That(DescribeGrid(grid), Is.EqualTo(new[]
+            {
+                ".........",
+                ".PPPPPPP.",
+                "........."
+            }), "The four-cell Player cluster should take both smaller clusters, whatever their colours.");
+        }
+
+        /// <summary>Touching clusters of the same size leave each other alone whatever their colours, so four pairs of four colours, each touching the other three, all stand.</summary>
+        [Test]
+        public void EqualSizedClustersOfDifferentColours_LeaveEachOtherAlone()
+        {
+            var pattern = new[]
+            {
+                "......",
+                ".PPOO.",
+                ".TTFF.",
+                "......"
+            };
+            var grid = CreateGrid(pattern);
+
+            var convertedCellCount = Resolve(grid);
+
+            Assert.That(convertedCellCount, Is.Zero, "No cluster is bigger than any cluster it touches.");
+            Assert.That(DescribeGrid(grid), Is.EqualTo(pattern), "Equal-sized clusters of different colours should stand.");
+            Assert.That(grid.ChangedCellIndices, Is.Empty, "Nothing should be recorded as changed.");
+        }
+
+        /// <summary>In a chain of a Fourth cell, an Opponent pair and a Third trio, the Third trio acts first as the largest absorber, takes the pair, and then, at five cells, the Fourth cell too.</summary>
+        [Test]
+        public void ChainOfThreeColours_ResolvesLargestAbsorberFirstUntilStable()
+        {
+            // The Opponent pair comes first in cell order and also touches a smaller enemy; had it acted first it would
+            // have grown to three cells, level with the Third trio, and the board would have stood as ".OOOTTT.".
+            var grid = CreateGrid(
+                "........",
+                ".FOOTTT.",
+                "........");
+            var absorber = new ClusterAbsorber(grid.MaximumCellCount);
+            var fourthCell = grid.ToCellIndex(1, 1);
+
+            var convertedCellCount = absorber.ResolveAbsorptions(grid);
+
+            Assert.That(convertedCellCount, Is.EqualTo(3), "The Opponent pair and then the Fourth cell should change owner.");
+            Assert.That(DescribeGrid(grid), Is.EqualTo(new[]
+            {
+                "........",
+                ".TTTTTT.",
+                "........"
+            }), "The Third trio should absorb the pair first and, grown to five, the Fourth cell next.");
+            Assert.That(absorber.ConvertedCellIndices, Is.EquivalentTo(new[] { fourthCell, grid.ToCellIndex(1, 2), grid.ToCellIndex(1, 3) }), "Exactly the pair and the Fourth cell should be listed as converted.");
+            Assert.That(absorber.ConvertedCellIndices[absorber.ConvertedCellIndices.Count - 1], Is.EqualTo(fourthCell), "The Fourth cell should convert last, in the second round, after the pair.");
+        }
+
+        /// <summary>Clusters of Classic's extra colours that touch a bigger cluster only at a corner are still absorbed.</summary>
+        [Test]
+        public void DiagonalContact_CountsForEveryColour()
+        {
+            var grid = CreateGrid(
+                "T....",
+                ".OO..",
+                ".OO..",
+                "...F.",
+                ".....");
+
+            var convertedCellCount = Resolve(grid);
+
+            Assert.That(convertedCellCount, Is.EqualTo(2), "The Third and Fourth cells should both change owner.");
+            Assert.That(DescribeGrid(grid), Is.EqualTo(new[]
+            {
+                "O....",
+                ".OO..",
+                ".OO..",
+                "...O.",
+                "....."
+            }), "The Opponent block should absorb the Third and Fourth cells touching its corners.");
+        }
+
         /// <summary>Resolves absorptions with a fresh absorber sized for the grid and returns the converted cell count.</summary>
         private static int Resolve(CellGrid grid)
         {
             return new ClusterAbsorber(grid.MaximumCellCount).ResolveAbsorptions(grid);
         }
 
-        /// <summary>Builds a grid sized exactly to rows of text where '.' is empty, 'P' is Player and 'O' is Opponent, with no recorded changes.</summary>
+        /// <summary>Builds a grid sized exactly to rows of text where '.' is empty, 'P' is Player, 'O' is Opponent, 'T' is Third and 'F' is Fourth, with no recorded changes.</summary>
         private static CellGrid CreateGrid(params string[] rows)
         {
             var grid = new CellGrid(rows.Length, rows[0].Length);
@@ -454,6 +547,10 @@ namespace GameOfLife.Tests
                     return CellOwner.Player;
                 case OpponentSymbol:
                     return CellOwner.Opponent;
+                case ThirdSymbol:
+                    return CellOwner.Third;
+                case FourthSymbol:
+                    return CellOwner.Fourth;
                 case EmptySymbol:
                     return CellOwner.None;
                 default:
@@ -461,7 +558,7 @@ namespace GameOfLife.Tests
             }
         }
 
-        /// <summary>Converts an owner into its pattern character.</summary>
+        /// <summary>Converts an owner into its pattern character, or '?' for a value that is not a CellOwner, so a broken colour never looks empty.</summary>
         private static char ToSymbol(CellOwner owner)
         {
             switch (owner)
@@ -470,8 +567,14 @@ namespace GameOfLife.Tests
                     return PlayerSymbol;
                 case CellOwner.Opponent:
                     return OpponentSymbol;
-                default:
+                case CellOwner.Third:
+                    return ThirdSymbol;
+                case CellOwner.Fourth:
+                    return FourthSymbol;
+                case CellOwner.None:
                     return EmptySymbol;
+                default:
+                    return UnexpectedOwnerSymbol;
             }
         }
     }

@@ -18,6 +18,7 @@ namespace GameOfLife.Gameplay
         public bool RandomColoursEnabled { get; private set; }
         public bool GridHighlightsVisible { get; private set; }
         public int VersusSetupSquares { get; private set; }
+        public int VersusSetupSeconds { get; private set; }
         public int VersusMatchSquares { get; private set; }
         public int VersusMatchSeconds { get; private set; }
         public OpponentDifficulty OpponentDifficulty { get; private set; }
@@ -42,6 +43,7 @@ namespace GameOfLife.Gameplay
             RandomColoursEnabled = settings.RandomColoursEnabledOnStart;
             GridHighlightsVisible = settings.GridHighlightsVisibleOnStart;
             VersusSetupSquares = settings.StartingSetupSquares;
+            VersusSetupSeconds = settings.StartingSetupSeconds;
             VersusMatchSquares = settings.StartingMatchSquares;
             VersusMatchSeconds = settings.StartingMatchSeconds;
             OpponentDifficulty = settings.OpponentDifficultyOnStart;
@@ -112,6 +114,13 @@ namespace GameOfLife.Gameplay
         public void SetVersusSetupSquares(int squares)
         {
             VersusSetupSquares = squares;
+            MatchRulesChanged?.Invoke();
+        }
+
+        /// <summary>Sets how many seconds both sides have to place their Versus setup squares; a match still in setup restarts with it.</summary>
+        public void SetVersusSetupSeconds(int seconds)
+        {
+            VersusSetupSeconds = seconds;
             MatchRulesChanged?.Invoke();
         }
 

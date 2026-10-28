@@ -5,6 +5,7 @@ namespace GameOfLife.UI.Screens
     {
         WholeNumber,
         Seconds,
-        MinutesAndSeconds
+        MinutesAndSeconds,
+        Named
     }
 }

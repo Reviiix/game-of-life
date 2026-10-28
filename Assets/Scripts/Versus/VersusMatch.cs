@@ -5,7 +5,7 @@ using GameOfLife.Simulation;
 
 namespace GameOfLife.Versus
 {
-    /// <summary>Applies the rules of one versus match: turn-based setup on each side's half, then free placement between generations.</summary>
+    /// <summary>Applies the rules of one versus match: a setup stage where both sides place on their own halves at the same time, singly or as whole patterns, until both are done or the mode runs out of setup time, then free placement between generations.</summary>
     public sealed class VersusMatch
     {
         private const int SideCount = 2;
@@ -18,11 +18,14 @@ namespace GameOfLife.Versus
         private readonly ClusterAbsorber absorber;
         private readonly int[] remainingSetupSquares;
         private readonly int[] remainingMatchSquares;
+        private int setupSquaresEach;
 
         public VersusStage Stage { get; private set; }
-        public CellOwner SideToPlace { get; private set; }
         public bool IsSetupComplete { get; private set; }
         public CellOwner LastAbsorbingSide { get; private set; }
+
+        /// <summary>How many setup squares a side must have placed before it may end setup early: half its setup squares, rounded up.</summary>
+        public int MinimumSetupSquaresBeforeEndingEarly => (setupSquaresEach + 1) / 2;
 
         /// <summary>The cells the last placement or generation converted to the other side, each once; empty when nothing was absorbed.</summary>
         public IReadOnlyList<int> LastConvertedCellIndices => absorber.ConvertedCellIndices;
@@ -35,28 +38,81 @@ namespace GameOfLife.Versus
             remainingSetupSquares = new int[SideCount];
             remainingMatchSquares = new int[SideCount];
             Stage = VersusStage.Finished;
-            SideToPlace = CellOwner.None;
         }
 
-        /// <summary>Kills every cell, refills both sides' pools and starts setup with the Player's turn, skipping any side that cannot place.</summary>
+        /// <summary>Kills every cell, refills both sides' pools and starts setup, which is complete at once if neither side can place.</summary>
         public void Begin(VersusMatchRules rules)
         {
             grid.KillAllCells();
+            setupSquaresEach = rules.SetupSquaresEach;
             remainingSetupSquares[PlayerSlot] = rules.SetupSquaresEach;
             remainingSetupSquares[OpponentSlot] = rules.SetupSquaresEach;
             remainingMatchSquares[PlayerSlot] = rules.MatchSquaresEach;
             remainingMatchSquares[OpponentSlot] = rules.MatchSquaresEach;
             Stage = VersusStage.Setup;
-            IsSetupComplete = false;
             LastAbsorbingSide = CellOwner.None;
             absorber.ForgetConvertedCells();
-            PassSetupTurn(CellOwner.Player, CellOwner.Opponent);
+            RefreshSetupCompletion();
         }
 
         /// <summary>Returns how many setup squares the side still has to place.</summary>
         public int GetRemainingSetupSquares(CellOwner side)
         {
             return remainingSetupSquares[ToSideSlot(side)];
+        }
+
+        /// <summary>Returns how many setup squares the side has placed so far this match.</summary>
+        public int GetPlacedSetupSquares(CellOwner side)
+        {
+            return setupSquaresEach - remainingSetupSquares[ToSideSlot(side)];
+        }
+
+        /// <summary>Returns how many of the side's remaining setup squares it would keep for the match if it ended setup now: half, rounded down.</summary>
+        public int GetSetupSquaresKeptIfEndedEarly(CellOwner side)
+        {
+            return remainingSetupSquares[ToSideSlot(side)] / 2;
+        }
+
+        /// <summary>Returns whether the side may stop placing setup squares now: setup is still running, the side has squares left, and it has placed at least the minimum.</summary>
+        public bool CanEndSetupEarly(CellOwner side)
+        {
+            return Stage == VersusStage.Setup
+                && !IsSetupComplete
+                && remainingSetupSquares[ToSideSlot(side)] > 0
+                && GetPlacedSetupSquares(side) >= MinimumSetupSquaresBeforeEndingEarly;
+        }
+
+        /// <summary>Stops the side placing setup squares: half its remaining ones (rounded down) move to its match pool, the rest are lost, and the other side places alone until it too is done.</summary>
+        public void EndSetupEarly(CellOwner side)
+        {
+            if (!CanEndSetupEarly(side))
+            {
+                throw new InvalidOperationException($"{side} cannot end setup early: it has placed {GetPlacedSetupSquares(side)} of the {MinimumSetupSquaresBeforeEndingEarly} setup squares needed, with {remainingSetupSquares[ToSideSlot(side)]} left, in the {Stage} stage.");
+            }
+
+            var slot = ToSideSlot(side);
+            remainingMatchSquares[slot] += remainingSetupSquares[slot] / 2;
+            remainingSetupSquares[slot] = 0;
+            RefreshSetupCompletion();
+        }
+
+        /// <summary>Ends setup when its time is up: both sides lose any setup squares they have not placed, and setup is complete.</summary>
+        public void RunOutOfSetupTime()
+        {
+            if (Stage != VersusStage.Setup)
+            {
+                throw new InvalidOperationException($"Setup time can only run out during setup, but the stage is {Stage}.");
+            }
+
+            remainingSetupSquares[PlayerSlot] = 0;
+            remainingSetupSquares[OpponentSlot] = 0;
+            IsSetupComplete = true;
+        }
+
+        /// <summary>Returns whether the side can still place in setup: setup is running, and the side has setup squares left and an empty cell on its half to put one on.</summary>
+        public bool CanStillPlaceInSetup(CellOwner side)
+        {
+            return Stage == VersusStage.Setup && remainingSetupSquares[ToSideSlot(side)] > 0 && GetSetupRegion(side).HasPlaceableCell(grid);
         }
 
         /// <summary>Returns how many match squares the side still has to place.</summary>
@@ -89,7 +145,7 @@ namespace GameOfLife.Versus
             }
         }
 
-        /// <summary>Returns whether the side may place a square on the cell now, given the stage, the turn, its pool and the cell.</summary>
+        /// <summary>Returns whether the side may place a square on the cell now, given the stage, its pool and the cell.</summary>
         public bool CanPlace(CellOwner side, int cellIndex)
         {
             if (!IsSide(side) || !IsEmptyCellInGrid(cellIndex))
@@ -100,7 +156,7 @@ namespace GameOfLife.Versus
             switch (Stage)
             {
                 case VersusStage.Setup:
-                    return side == SideToPlace
+                    return !IsSetupComplete
                         && remainingSetupSquares[ToSideSlot(side)] > 0
                         && GetSetupRegion(side).Contains(grid, cellIndex);
                 case VersusStage.Match:
@@ -111,7 +167,7 @@ namespace GameOfLife.Versus
             }
         }
 
-        /// <summary>Places the side's square if allowed, spends it from the current stage's pool, resolves absorptions and passes the setup turn.</summary>
+        /// <summary>Places the side's square if allowed, spends it from the current stage's pool and resolves absorptions; in setup it then checks whether both sides are done.</summary>
         public bool TryPlace(CellOwner side, int cellIndex)
         {
             if (!CanPlace(side, cellIndex))
@@ -126,9 +182,61 @@ namespace GameOfLife.Versus
             ResolveAbsorptionsAndRecordAbsorbingSide();
             if (isSetup)
             {
-                PassSetupTurn(OtherSide(side), side);
+                RefreshSetupCompletion();
             }
 
+            return true;
+        }
+
+        /// <summary>Returns whether the side may place all the listed cells as one setup move: setup still running, enough squares, and every cell empty, inside its half and listed once.</summary>
+        public bool CanPlaceSetupPattern(CellOwner side, IReadOnlyList<int> cellIndices)
+        {
+            if (cellIndices == null)
+            {
+                throw new ArgumentNullException(nameof(cellIndices));
+            }
+
+            if (!IsSide(side) || Stage != VersusStage.Setup || IsSetupComplete)
+            {
+                return false;
+            }
+
+            var count = cellIndices.Count;
+            if (count < 1 || count > remainingSetupSquares[ToSideSlot(side)])
+            {
+                return false;
+            }
+
+            var region = GetSetupRegion(side);
+            for (var position = 0; position < count; position++)
+            {
+                var cellIndex = cellIndices[position];
+                if (!IsEmptyCellInGrid(cellIndex) || !region.Contains(grid, cellIndex) || IsListedBefore(cellIndices, position))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>Places the listed cells as one setup move if allowed: one square per cell and absorptions resolved once for the whole pattern.</summary>
+        public bool TryPlaceSetupPattern(CellOwner side, IReadOnlyList<int> cellIndices)
+        {
+            if (!CanPlaceSetupPattern(side, cellIndices))
+            {
+                return false;
+            }
+
+            var count = cellIndices.Count;
+            remainingSetupSquares[ToSideSlot(side)] -= count;
+            for (var position = 0; position < count; position++)
+            {
+                grid.SetOwner(cellIndices[position], side);
+            }
+
+            ResolveAbsorptionsAndRecordAbsorbingSide();
+            RefreshSetupCompletion();
             return true;
         }
 
@@ -185,10 +293,11 @@ namespace GameOfLife.Versus
             return grid.CountCells(side);
         }
 
-        /// <summary>Returns whether, during the match, either side has no living cells and no match squares left.</summary>
-        public bool IsDecidedEarly()
+        /// <summary>Returns whether, during the match, the side has no living cells, whatever squares it has left; the match then ends after a short wait unless the side gets a square back.</summary>
+        public bool HasNoCells(CellOwner side)
         {
-            return Stage == VersusStage.Match && (HasRunOut(CellOwner.Player) || HasRunOut(CellOwner.Opponent));
+            EnsureIsSide(side);
+            return Stage == VersusStage.Match && grid.CountCells(side) == 0;
         }
 
         /// <summary>Returns the side with more living cells as the winner, or a draw when the counts are equal.</summary>
@@ -208,39 +317,28 @@ namespace GameOfLife.Versus
         public VersusOutcome Finish()
         {
             Stage = VersusStage.Finished;
-            SideToPlace = CellOwner.None;
             return DetermineOutcome();
         }
 
-        /// <summary>Gives the setup turn to the preferred side if it can still place, else to the fallback side, else marks setup complete.</summary>
-        private void PassSetupTurn(CellOwner preferredSide, CellOwner fallbackSide)
+        /// <summary>Marks setup complete once neither side can place any more, because each has spent its squares, ended early or filled its half.</summary>
+        private void RefreshSetupCompletion()
         {
-            if (CanStillPlaceInSetup(preferredSide))
-            {
-                SideToPlace = preferredSide;
-                return;
-            }
-
-            if (CanStillPlaceInSetup(fallbackSide))
-            {
-                SideToPlace = fallbackSide;
-                return;
-            }
-
-            SideToPlace = CellOwner.None;
-            IsSetupComplete = true;
+            IsSetupComplete = !CanStillPlaceInSetup(CellOwner.Player) && !CanStillPlaceInSetup(CellOwner.Opponent);
         }
 
-        /// <summary>Returns whether the side has setup squares left and an empty cell on its half to put one on.</summary>
-        private bool CanStillPlaceInSetup(CellOwner side)
+        /// <summary>Returns whether the cell at the position also appears earlier in the list.</summary>
+        private static bool IsListedBefore(IReadOnlyList<int> cellIndices, int position)
         {
-            return remainingSetupSquares[ToSideSlot(side)] > 0 && GetSetupRegion(side).HasPlaceableCell(grid);
-        }
+            var cellIndex = cellIndices[position];
+            for (var earlier = 0; earlier < position; earlier++)
+            {
+                if (cellIndices[earlier] == cellIndex)
+                {
+                    return true;
+                }
+            }
 
-        /// <summary>Returns whether the side has no living cells and no match squares left, so it can no longer score.</summary>
-        private bool HasRunOut(CellOwner side)
-        {
-            return remainingMatchSquares[ToSideSlot(side)] == 0 && grid.CountCells(side) == 0;
+            return false;
         }
 
         /// <summary>Returns whether the cell index lies in the grid's active area and the cell there is empty.</summary>
@@ -253,12 +351,6 @@ namespace GameOfLife.Versus
         private static bool IsSide(CellOwner owner)
         {
             return owner == CellOwner.Player || owner == CellOwner.Opponent;
-        }
-
-        /// <summary>Returns the side playing against the given side.</summary>
-        private static CellOwner OtherSide(CellOwner side)
-        {
-            return side == CellOwner.Player ? CellOwner.Opponent : CellOwner.Player;
         }
 
         /// <summary>Returns the pool slot for a side, throwing if the owner is not a side that places squares.</summary>

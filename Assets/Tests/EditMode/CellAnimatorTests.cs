@@ -26,7 +26,7 @@ namespace GameOfLife.Tests
         public void SetUp()
         {
             pixels = new NativeArray<Color32>(CellCount, Allocator.Persistent);
-            animator = new CellAnimator(CellCount, OneSecondLinear, OneSecondLinear, OneSecondLinear, SquashScale, ColourShare);
+            animator = new CellAnimator(CellCount, OneSecondLinear, OneSecondLinear, OneSecondLinear, OneSecondLinear, SquashScale, ColourShare);
             animator.Clear(CellCount, pixels);
         }
 
@@ -91,6 +91,52 @@ namespace GameOfLife.Tests
             AssertPixel(pixels[2], Red, 1f);
         }
 
+        /// <summary>A settling cell blends to its new colour over the whole motion at full size, never squashing.</summary>
+        [Test]
+        public void RecolouredCell_BlendsWithoutSquashing()
+        {
+            animator.SetCellImmediately(2, Blue, true, pixels);
+            animator.RecolourCell(2, Red, 0f, pixels);
+
+            animator.Advance(0f, pixels);
+            AssertPixel(pixels[2], Blue, 1f);
+
+            animator.Advance(0.5f, pixels);
+            AssertPixel(pixels[2], Color32.Lerp(Blue, Red, 0.5f), 1f);
+
+            Assert.That(animator.Advance(1f, pixels), Is.False);
+            AssertPixel(pixels[2], Red, 1f);
+        }
+
+        /// <summary>Recolouring an empty cell, or to the colour it already has, starts no animation and leaves the empty cell empty.</summary>
+        [Test]
+        public void RecolourOfEmptyOrSameColourCell_StartsNoAnimation()
+        {
+            animator.SetCellImmediately(3, Blue, true, pixels);
+            animator.RecolourCell(3, Blue, 0f, pixels);
+            animator.RecolourCell(0, Red, 0f, pixels);
+
+            Assert.That(animator.HasActiveAnimations, Is.False);
+            Assert.That(pixels[0].a, Is.EqualTo(0));
+            animator.FinishAll(pixels);
+            Assert.That(pixels[0].a, Is.EqualTo(0));
+        }
+
+        /// <summary>A cell still growing in when it settles keeps growing from its shown size while it blends.</summary>
+        [Test]
+        public void RecolourMidAppear_ContinuesFromTheShownSize()
+        {
+            animator.SetCell(1, Blue, true, 0f, pixels);
+            animator.Advance(0.5f, pixels);
+
+            animator.RecolourCell(1, Red, 0.5f, pixels);
+            animator.Advance(1f, pixels);
+            AssertPixel(pixels[1], Color32.Lerp(Blue, Red, 0.5f), 0.75f);
+
+            Assert.That(animator.Advance(1.5f, pixels), Is.False);
+            AssertPixel(pixels[1], Red, 1f);
+        }
+
         /// <summary>A change that looks the same starts no animation.</summary>
         [Test]
         public void UnchangedLook_StartsNoAnimation()
@@ -150,7 +196,10 @@ namespace GameOfLife.Tests
 
             animator.SetCell(0, Red, true, 0.75f, pixels);
             animator.Advance(0.75f, pixels);
-            AssertPixel(pixels[0], Red, 0.375f);
+            AssertPixel(pixels[0], Blue, 0.375f);
+
+            animator.Advance(1f, pixels);
+            AssertPixel(pixels[0], Red, 0.53f);
         }
 
         /// <summary>FinishAll jumps every animating cell to its final look.</summary>

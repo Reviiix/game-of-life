@@ -68,8 +68,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\xA30.99"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 42ef9e72371064556a74a7ecea2903d3, type: 2}
-  m_sharedMaterial: {fileID: -5462910232755998555, guid: 42ef9e72371064556a74a7ecea2903d3, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 46f8159aa8223490fb68c544675e1aab, type: 2}
+  m_sharedMaterial: {fileID: -3323927178666917730, guid: 46f8159aa8223490fb68c544675e1aab, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -218,7 +218,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1937064225589751596, guid: 838e376ddb8b34fa3b10716dad1202e8, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.9998477
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1937064225589751596, guid: 838e376ddb8b34fa3b10716dad1202e8, type: 3}
       propertyPath: m_LocalRotation.x
@@ -230,7 +230,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1937064225589751596, guid: 838e376ddb8b34fa3b10716dad1202e8, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0.017452406
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1937064225589751596, guid: 838e376ddb8b34fa3b10716dad1202e8, type: 3}
       propertyPath: m_AnchoredPosition.x

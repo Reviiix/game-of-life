@@ -1,0 +1,216 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ba40f1a7a4ed417585311210b9c60cd, type: 3}
+  m_Name: PatternCatalogue
+  m_EditorClassIdentifier: GameOfLife::GameOfLife.Patterns.PatternCatalogue
+  patterns:
+  - displayName: Block
+    description: 'The smallest still life: four cells that never change.'
+    category: 0
+    rows:
+    - OO
+    - OO
+  - displayName: Beehive
+    description: A six-cell still life shaped like a hexagon.
+    category: 0
+    rows:
+    - .OO.
+    - O..O
+    - .OO.
+  - displayName: Loaf
+    description: 'A seven-cell still life: a beehive with one corner pulled out.'
+    category: 0
+    rows:
+    - .OO.
+    - O..O
+    - .O.O
+    - ..O.
+  - displayName: Boat
+    description: A five-cell still life with a single cell at its stern.
+    category: 0
+    rows:
+    - OO.
+    - O.O
+    - .O.
+  - displayName: Tub
+    description: Four cells around an empty centre that stay put forever.
+    category: 0
+    rows:
+    - .O.
+    - O.O
+    - .O.
+  - displayName: Pond
+    description: A ring of eight cells around an empty middle.
+    category: 0
+    rows:
+    - .OO.
+    - O..O
+    - O..O
+    - .OO.
+  - displayName: Ship
+    description: 'A six-cell still life: a boat with a second stern.'
+    category: 0
+    rows:
+    - OO.
+    - O.O
+    - .OO
+  - displayName: Blinker
+    description: Three in a row, flipping across and down every generation.
+    category: 1
+    rows:
+    - OOO
+  - displayName: Toad
+    description: Six cells that open and close every two generations.
+    category: 1
+    rows:
+    - .OOO
+    - OOO.
+  - displayName: Beacon
+    description: Two blocks that blink their inner corners every two generations.
+    category: 1
+    rows:
+    - OO..
+    - OO..
+    - ..OO
+    - ..OO
+  - displayName: Clock
+    description: A four-cell rotor that ticks round every two generations.
+    category: 1
+    rows:
+    - ..O.
+    - O.O.
+    - .O.O
+    - .O..
+  - displayName: Pulsar
+    description: A big symmetric shape that pulses with a period of three.
+    category: 1
+    rows:
+    - ..OOO...OOO..
+    - .............
+    - O....O.O....O
+    - O....O.O....O
+    - O....O.O....O
+    - ..OOO...OOO..
+    - .............
+    - ..OOO...OOO..
+    - O....O.O....O
+    - O....O.O....O
+    - O....O.O....O
+    - .............
+    - ..OOO...OOO..
+  - displayName: Mold
+    description: A small shape that cycles through four forms.
+    category: 1
+    rows:
+    - ...OO.
+    - ..O..O
+    - O..O.O
+    - ....O.
+    - O.OO..
+    - .O....
+  - displayName: Octagon
+    description: A ring that breathes in and out every five generations.
+    category: 1
+    rows:
+    - ...OO...
+    - ..O..O..
+    - .O....O.
+    - O......O
+    - O......O
+    - .O....O.
+    - ..O..O..
+    - ...OO...
+  - displayName: Figure eight
+    description: Two blocks that trade places every eight generations.
+    category: 1
+    rows:
+    - OOO...
+    - OOO...
+    - OOO...
+    - ...OOO
+    - ...OOO
+    - ...OOO
+  - displayName: Pentadecathlon
+    description: A row that bulges and narrows over fifteen generations.
+    category: 1
+    rows:
+    - ..O....O..
+    - OO.OOOO.OO
+    - ..O....O..
+  - displayName: Glider
+    description: 'The classic: creeps diagonally one cell every four generations.'
+    category: 2
+    rows:
+    - .O.
+    - ..O
+    - OOO
+  - displayName: Lightweight spaceship
+    description: Flies left two cells every four generations.
+    category: 2
+    rows:
+    - .O..O
+    - O....
+    - O...O
+    - OOOO.
+  - displayName: Middleweight spaceship
+    description: 'A bigger spaceship: two cells left every four generations.'
+    category: 2
+    rows:
+    - ...O..
+    - .O...O
+    - O.....
+    - O....O
+    - OOOOO.
+  - displayName: Heavyweight spaceship
+    description: 'The largest simple spaceship: two cells per four generations.'
+    category: 2
+    rows:
+    - ...OO..
+    - .O....O
+    - O......
+    - O.....O
+    - OOOOOO.
+  - displayName: R-pentomino
+    description: Five cells that erupt into chaos for over a thousand generations.
+    category: 3
+    rows:
+    - .OO
+    - OO.
+    - .O.
+  - displayName: B-heptomino
+    description: Seven cells that spread out and leave debris behind.
+    category: 3
+    rows:
+    - O.OO
+    - OOO.
+    - .O..
+  - displayName: Pi-heptomino
+    description: Seven cells shaped like a pi that grow into a tangle of life.
+    category: 3
+    rows:
+    - OOO
+    - O.O
+    - O.O
+  - displayName: Acorn
+    description: Seven cells that take thousands of generations to settle.
+    category: 3
+    rows:
+    - .O.....
+    - ...O...
+    - OO..OOO
+  - displayName: Diehard
+    description: Seven cells that grow, then vanish after 130 generations.
+    category: 3
+    rows:
+    - ......O.
+    - OO......
+    - .O...OOO

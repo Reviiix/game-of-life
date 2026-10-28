@@ -13,6 +13,7 @@ namespace GameOfLife.UI.Buttons
     public abstract class AnimatedButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
     {
         private Button button;
+        private GraphicRaycaster screenRaycaster;
         private LayeredScale layeredScale;
         private AudioManager audioManager;
         private ReplayableTween squeeze;
@@ -23,13 +24,17 @@ namespace GameOfLife.UI.Buttons
         private float pressScaleAtTweenEnd;
         private bool isActingAfterSpring;
 
-        /// <summary>Runs once the spring-back animation has finished.</summary>
+        /// <summary>Runs once the spring-back animation has finished, or straight away for a button that acts immediately.</summary>
         protected abstract void OnPressed();
 
-        /// <summary>Caches the button and its layered scale, builds the press tweens from the ThemeService (registered before any Awake) and listens for clicks.</summary>
+        /// <summary>Whether the button acts the moment it is clicked, still squeezing and springing, so quick repeat taps all count, as a colour cycler needs; most buttons wait for the spring to settle.</summary>
+        protected virtual bool ActsImmediately => false;
+
+        /// <summary>Caches the button, the raycaster of the screen it sits on and its layered scale, builds the press tweens from the ThemeService (registered before any Awake) and listens for clicks.</summary>
         protected virtual void Awake()
         {
             button = GetComponent<Button>();
+            screenRaycaster = GetComponentInParent<GraphicRaycaster>(true);
             layeredScale = LayeredScale.GetOrAdd(gameObject);
             var theme = ServiceLocator.Get<ThemeService>().Theme;
             pressedScale = theme.ButtonPressedScale;
@@ -83,7 +88,7 @@ namespace GameOfLife.UI.Buttons
             AnimatePress(springBack, 1f);
         }
 
-        /// <summary>Clicks and springs back from the squeezed size, acting once the spring settles, unless a press is already being acted on.</summary>
+        /// <summary>Clicks and springs back from the squeezed size, acting once the spring settles, or at once for a button that acts immediately, unless a press is already being acted on.</summary>
         private void StartPress()
         {
             if (isActingAfterSpring)
@@ -97,10 +102,14 @@ namespace GameOfLife.UI.Buttons
             }
 
             audioManager.Play(SoundEffect.ButtonPress);
-            isActingAfterSpring = true;
+            isActingAfterSpring = !ActsImmediately;
             squeeze.Stop();
             SetPressScale(Mathf.Min(shownPressScale, pressedScale));
             AnimatePress(springBack, 1f);
+            if (ActsImmediately)
+            {
+                OnPressed();
+            }
         }
 
         /// <summary>Plays a press tween from the current press scale to the given one.</summary>
@@ -124,7 +133,7 @@ namespace GameOfLife.UI.Buttons
             layeredScale.SetPressScale(scale);
         }
 
-        /// <summary>Acts on the click once the spring has settled; a spring from a cancelled press does nothing.</summary>
+        /// <summary>Acts on the click once the spring has settled; a spring from a cancelled press does nothing, and neither does one whose screen stopped taking taps meanwhile, such as a second menu button tapped before the first one's page opened.</summary>
         private void FinishSpringBack()
         {
             SetPressScale(1f);
@@ -134,6 +143,11 @@ namespace GameOfLife.UI.Buttons
             }
 
             isActingAfterSpring = false;
+            if (screenRaycaster && !screenRaycaster.enabled)
+            {
+                return;
+            }
+
             OnPressed();
         }
     }

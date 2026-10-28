@@ -17,7 +17,7 @@ import zlib
 
 OUTPUT_PATH = os.path.join("Assets", "Art", "Sprites", "Interface.png")
 SHEET_WIDTH = 1024
-SHEET_HEIGHT = 512
+SHEET_HEIGHT = 1024
 
 # Icons are designed on a 24-unit grid, like most icon sets, and drawn at ICON_SIZE pixels.
 ICON_SIZE = 192
@@ -37,6 +37,13 @@ SPRITES = {
     "IconPause": (832, 0, ICON_SIZE, ICON_SIZE),
     "IconReset": (0, 256, ICON_SIZE, ICON_SIZE),
     "IconMenu": (192, 256, ICON_SIZE, ICON_SIZE),
+    "IconPatterns": (0, 512, ICON_SIZE, ICON_SIZE),
+    "IconSettings": (192, 512, ICON_SIZE, ICON_SIZE),
+    "IconRotate": (384, 512, ICON_SIZE, ICON_SIZE),
+    "IconFlip": (576, 512, ICON_SIZE, ICON_SIZE),
+    "IconTick": (768, 512, ICON_SIZE, ICON_SIZE),
+    "IconCross": (0, 704, ICON_SIZE, ICON_SIZE),
+    "IconSwatch": (192, 704, ICON_SIZE, ICON_SIZE),
 }
 
 
@@ -84,6 +91,18 @@ def shrink(corners, amount):
         scale = max(length - amount * 2.0, 0.0) / length
         shrunk.append((centre_x + (corner_x - centre_x) * scale, centre_y + (corner_y - centre_y) * scale))
     return shrunk
+
+
+def rotate(x, y, degrees):
+    """Turns a point about the origin by the given angle, anticlockwise."""
+    radians = math.radians(degrees)
+    cosine, sine = math.cos(radians), math.sin(radians)
+    return x * cosine + y * sine, -x * sine + y * cosine
+
+
+def ring(x, y, centre, radius, stroke_radius):
+    """Distance from a point to a circular stroke."""
+    return abs(math.hypot(x - centre[0], y - centre[1]) - radius) - stroke_radius
 
 
 def arc(x, y, centre, radius, gap_start_degrees, gap_end_degrees, stroke_radius):
@@ -137,9 +156,75 @@ def icon_distance(name, x, y):
         tip_y = centre[1] + radius
         head = triangle(gx, gy, shrink([(12.9, tip_y + 3.3), (8.6, tip_y), (12.9, tip_y - 3.3)], 0.5), 0.5)
         distance = min(body, head)
+    elif name == "IconPatterns":
+        distance = glider_distance(gx, gy)
+    elif name == "IconSettings":
+        distance = gear_distance(gx, gy)
+    elif name == "IconRotate":
+        distance = rotate_arrow_distance(gx, gy, stroke)
+    elif name == "IconFlip":
+        distance = flip_distance(gx, gy, stroke)
+    elif name == "IconTick":
+        distance = min(capsule(gx, gy, (4.5, 12.5), (9.5, 7.5), 1.4), capsule(gx, gy, (9.5, 7.5), (19.5, 17.5), 1.4))
+    elif name == "IconCross":
+        distance = min(capsule(gx, gy, (6.0, 6.0), (18.0, 18.0), 1.4), capsule(gx, gy, (6.0, 18.0), (18.0, 6.0), 1.4))
+    elif name == "IconSwatch":
+        # A paint drop, tinted with Classic's chosen cell colour by the colour button: a circle with a point whose sides meet it tangentially.
+        drop_centre = (12.0, 9.5)
+        drop_radius = 6.0
+        apex = (12.0, 20.5)
+        tangent_angle = math.acos(drop_radius / (apex[1] - drop_centre[1]))
+        tangent_x = drop_radius * math.sin(tangent_angle)
+        tangent_y = drop_centre[1] + drop_radius * math.cos(tangent_angle)
+        body = math.hypot(gx - drop_centre[0], gy - drop_centre[1]) - drop_radius
+        point = triangle(gx, gy, [apex, (drop_centre[0] - tangent_x, tangent_y), (drop_centre[0] + tangent_x, tangent_y)], 0.0)
+        distance = min(body, point)
     else:
         raise ValueError(name)
     return distance * unit
+
+
+def glider_distance(gx, gy):
+    """A glider drawn as five rounded tiles on a three-by-three grid, the catalogue's emblem."""
+    pitch = 6.0
+    cells = [(0, 1), (1, 2), (2, 0), (2, 1), (2, 2)]
+    return min(rounded_box(gx - (6.0 + column * pitch), gy - (18.0 - row * pitch), 2.55, 2.55, 1.0) for row, column in cells)
+
+
+def gear_distance(gx, gy):
+    """A cog: a ring with eight rounded teeth around it."""
+    centre = (12.0, 12.0)
+    body = ring(gx, gy, centre, 6.3, 2.3)
+    teeth = []
+    for tooth in range(8):
+        tooth_x, tooth_y = rotate(gx - centre[0], gy - centre[1], tooth * 45.0)
+        teeth.append(rounded_box(tooth_x - 8.6, tooth_y, 1.9, 1.75, 0.7))
+    return min(body, min(teeth))
+
+
+def rotate_arrow_distance(gx, gy, stroke):
+    """A tile with a three-quarter arrow circling it clockwise."""
+    centre = (12.0, 12.0)
+    tile = rounded_box(gx - centre[0], gy - centre[1], 3.1, 3.1, 1.0)
+    radius = 8.4
+    body = arc(gx, gy, centre, radius, 0.0, 80.0, stroke)
+    end = math.radians(80.0)
+    end_x, end_y = centre[0] + radius * math.cos(end), centre[1] + radius * math.sin(end)
+    along_x, along_y = math.sin(end), -math.cos(end)
+    across_x, across_y = math.cos(end), math.sin(end)
+    tip = (end_x + along_x * 3.0, end_y + along_y * 3.0)
+    base_a = (end_x + across_x * 2.6, end_y + across_y * 2.6)
+    base_b = (end_x - across_x * 2.6, end_y - across_y * 2.6)
+    head = triangle(gx, gy, shrink([tip, base_a, base_b], 0.4), 0.4)
+    return min(tile, body, head)
+
+
+def flip_distance(gx, gy, stroke):
+    """A filled triangle and its mirrored outline either side of a dashed axis."""
+    filled = triangle(gx, gy, shrink([(3.0, 5.5), (10.0, 12.0), (3.0, 18.5)], 0.6), 0.6)
+    outline = abs(triangle(gx, gy, [(21.0, 5.5), (14.0, 12.0), (21.0, 18.5)], 0.0)) - stroke * 0.85
+    dashes = min(capsule(gx, gy, (12.0, start), (12.0, start + 2.6), 0.75) for start in (3.5, 8.9, 14.3, 19.7))
+    return min(filled, outline, dashes)
 
 
 # ---------- Drawing and saving ----------

@@ -176,7 +176,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 256
+        y: 768
         width: 256
         height: 256
       alignment: 0
@@ -198,7 +198,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 256
-        y: 256
+        y: 768
         width: 256
         height: 256
       alignment: 0
@@ -220,7 +220,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 512
-        y: 384
+        y: 896
         width: 128
         height: 128
       alignment: 0
@@ -242,7 +242,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 640
-        y: 320
+        y: 832
         width: 192
         height: 192
       alignment: 0
@@ -264,7 +264,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 832
-        y: 320
+        y: 832
         width: 192
         height: 192
       alignment: 0
@@ -286,7 +286,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 64
+        y: 576
         width: 192
         height: 192
       alignment: 0
@@ -308,7 +308,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 192
-        y: 64
+        y: 576
         width: 192
         height: 192
       alignment: 0
@@ -321,6 +321,160 @@ TextureImporter:
       bones: []
       spriteID: 17cb4f72e2411455598d5c0c68eb36be
       internalID: 1772939516
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IconPatterns
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 320
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e9e239a21d6dd49f987f4064085ac71e
+      internalID: -71041286
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IconSettings
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 320
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b2b975085ef21454c94ffa951e9a353c
+      internalID: 290427943
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IconRotate
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 320
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d84211decde8d49ff93fd346c9102e86
+      internalID: 223338122
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IconFlip
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 320
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9ffe582a6e2534163ab169fe3a158e09
+      internalID: 524367959
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IconTick
+      rect:
+        serializedVersion: 2
+        x: 768
+        y: 320
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 22d0415d428da49cdbf549d5aa685780
+      internalID: 114913365
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IconCross
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 128
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9be2eec7466a74637a62d95a5aad15ed
+      internalID: 225480967
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IconSwatch
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 128
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 349f6632086254f1cbcfd5e59b071405
+      internalID: 574116706
       vertices: []
       indices: 
       edges: []
@@ -340,10 +494,17 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       Circle: -1434283915
+      IconCross: 225480967
+      IconFlip: 524367959
       IconMenu: 1772939516
+      IconPatterns: -71041286
       IconPause: -782841096
       IconPlay: -1950569899
       IconReset: -731742841
+      IconRotate: 223338122
+      IconSettings: 290427943
+      IconSwatch: 574116706
+      IconTick: 114913365
       ParticleTile: -1780068195
       RoundedPanel: -1682877635
   mipmapLimitGroupName: 

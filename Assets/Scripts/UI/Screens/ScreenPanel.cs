@@ -30,6 +30,7 @@ namespace GameOfLife.UI.Screens
         private float alphaAtHideStart;
         private bool isVisible;
 
+        public event Action Showing;
         public event Action Shown;
         public event Action Hidden;
 
@@ -46,15 +47,17 @@ namespace GameOfLife.UI.Screens
                 staggeredItemScales[itemIndex] = LayeredScale.GetOrAdd(staggeredItems[itemIndex].gameObject);
             }
 
-            showDuration = theme.ScreenShow.Duration + Mathf.Max(0, itemCount - 1) * theme.ScreenStaggerDelay;
+            var popDuration = theme.ScreenShow.Duration;
+            showDuration = popDuration > 0f ? popDuration + Mathf.Max(0, itemCount - 1) * theme.ScreenStaggerDelay : 0f;
             showTween = new ReplayableTween(new EasedMotion(showDuration, Ease.Linear), ShowShowProgress, RaiseShown);
             hideTween = new ReplayableTween(theme.ScreenHide, ShowHideProgress, FinishHiding);
         }
 
-        /// <summary>Makes this screen visible and able to receive taps, fading and popping it in; raises Shown once it has fully appeared.</summary>
+        /// <summary>Makes this screen visible and able to receive taps, fading and popping it in; raises Showing straight away and Shown once it has fully appeared.</summary>
         public void Show()
         {
             SetVisible(true);
+            Showing?.Invoke();
             if (showTween == null)
             {
                 RaiseShown();
@@ -84,7 +87,13 @@ namespace GameOfLife.UI.Screens
             Hidden?.Invoke();
         }
 
-        /// <summary>Shows or hides this screen at once, without animating or raising the Shown and Hidden events.</summary>
+        /// <summary>Stops this screen receiving taps at once while it stays drawn, such as under a page opening over it; showing or hiding it again resets that.</summary>
+        public void BlockTaps()
+        {
+            SetRaycastable(false);
+        }
+
+        /// <summary>Shows or hides this screen at once, without animating or raising the Showing, Shown and Hidden events.</summary>
         public void SetVisible(bool visible)
         {
             CacheComponentsIfNeeded();
@@ -123,10 +132,10 @@ namespace GameOfLife.UI.Screens
             }
         }
 
-        /// <summary>Returns the eased scale of something that started popping in the given seconds ago; a zero-length pop is instantly full size.</summary>
+        /// <summary>Returns the eased scale of something that started popping in the given seconds ago; with a zero-length pop everything is instantly full size, whatever the stagger.</summary>
         private float GetPopScale(EasedMotion show, float elapsed)
         {
-            if (elapsed >= show.Duration)
+            if (show.Duration <= 0f || elapsed >= show.Duration)
             {
                 return 1f;
             }

@@ -20,6 +20,7 @@ namespace GameOfLife.UI.Screens
         [SerializeField] private SliderValueFormat valueFormat;
 
         private readonly StringBuilder valueBuilder = new();
+        private string[] valueNames;
         private AudioManager audioManager;
         private float lastTickedDisplayValue;
 
@@ -34,6 +35,13 @@ namespace GameOfLife.UI.Screens
             slider.onValueChanged.AddListener(PlayTick);
             ShowValue(slider.value);
             lastTickedDisplayValue = RoundToDisplayedPrecision(slider.value);
+        }
+
+        /// <summary>Makes the slider step through named values, such as difficulties, showing the chosen name; set this row's format to Named.</summary>
+        public void ConfigureNamed(string[] names, int startingIndex)
+        {
+            valueNames = names;
+            Configure(0, names.Length - 1, startingIndex, true);
         }
 
         /// <summary>Calls the listener whenever the player moves the slider.</summary>
@@ -85,6 +93,9 @@ namespace GameOfLife.UI.Screens
                     }
 
                     valueLabel.SetText(valueBuilder.Append(seconds));
+                    break;
+                case SliderValueFormat.Named:
+                    valueLabel.SetText(valueNames[Mathf.Clamp(Mathf.RoundToInt(value), 0, valueNames.Length - 1)]);
                     break;
                 default:
                     valueLabel.SetText(WholeNumberFormat, value);

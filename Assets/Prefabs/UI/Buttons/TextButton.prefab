@@ -28,7 +28,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 493960833230787183}
-  m_LocalRotation: {x: 0, y: 0, z: -0.026176924, w: 0.99965733}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
@@ -217,8 +217,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: BUTTON
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 42ef9e72371064556a74a7ecea2903d3, type: 2}
-  m_sharedMaterial: {fileID: -5462910232755998555, guid: 42ef9e72371064556a74a7ecea2903d3, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 1b0fe3e275bc34e409fea7ad1f851827, type: 2}
+  m_sharedMaterial: {fileID: 83987506758527153, guid: 1b0fe3e275bc34e409fea7ad1f851827, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

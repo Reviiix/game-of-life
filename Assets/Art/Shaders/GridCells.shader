@@ -1,7 +1,9 @@
 // Draws the Game of Life board as rounded tiles from a texture holding one pixel per cell.
 // Each pixel's RGB is the tile colour and its alpha is the animated tile size (alpha 0 is an empty cell; see CellAnimator).
-// TEXCOORD1 carries (columns, rows, cell width, cell height) and TEXCOORD2 carries (tile gap, corner radius), all in canvas units,
-// and the vertex colour is the faint empty-tile colour, so no per-instance material is needed.
+// TEXCOORD1 carries (columns, rows, cell width, cell height) and TEXCOORD2 carries (tile gap, corner radius, empty-tile opacity, unused),
+// the first four in canvas units, so no per-instance material is needed. The empty-tile opacity is 0 while grid highlights are off.
+// The vertex colour's RGB is the faint empty-tile colour and its alpha
+// is the opacity the canvas passes down (1 unless a CanvasGroup is fading the board), which fades every tile.
 Shader "GameOfLife/UI/GridCells"
 {
     Properties
@@ -139,12 +141,13 @@ Shader "GameOfLife/UI/GridCells"
                 float2 growLimit = cellSize * 0.5 / max(restingHalfSize, 1e-4);
                 float tileScale = min(cell.a * MAXIMUM_ENCODED_SCALE, min(growLimit.x, growLimit.y));
 
-                float emptyCoverage = TileCoverage(positionInCell, restingHalfSize, cornerRadius, pixelSize) * input.emptyTileColour.a;
+                float emptyCoverage = TileCoverage(positionInCell, restingHalfSize, cornerRadius, pixelSize) * input.tileShape.z;
                 float livingCoverage = cell.a > 0.0 ? TileCoverage(positionInCell, restingHalfSize * tileScale, cornerRadius * tileScale, pixelSize) : 0.0;
 
                 fixed4 colour;
                 colour.a = livingCoverage + emptyCoverage * (1.0 - livingCoverage);
                 colour.rgb = (cell.rgb * livingCoverage + input.emptyTileColour.rgb * emptyCoverage * (1.0 - livingCoverage)) / max(colour.a, 1e-4);
+                colour.a *= input.emptyTileColour.a;
 
                 #ifdef UNITY_UI_CLIP_RECT
                 colour.a *= UnityGet2DClipping(input.worldPosition.xy, _ClipRect);

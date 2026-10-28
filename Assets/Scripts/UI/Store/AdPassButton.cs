@@ -11,14 +11,14 @@ namespace GameOfLife.UI.Store
     {
         [SerializeField] private TMP_Text priceLabel;
 
-        private Button button;
+        private Button storeButton;
         private PurchaseManager purchaseManager;
         private AdPassOwnership adPassOwnership;
 
         /// <summary>Connects to the store and ownership, then shows the right state straight away.</summary>
         public void Initialise(PurchaseManager purchases, AdPassOwnership ownership)
         {
-            button = GetComponent<Button>();
+            storeButton = GetComponent<Button>();
             purchaseManager = purchases;
             adPassOwnership = ownership;
             purchaseManager.StoreStateChanged += Refresh;
@@ -57,7 +57,7 @@ namespace GameOfLife.UI.Store
         private void Refresh()
         {
             gameObject.SetActive(!adPassOwnership.IsOwned);
-            button.interactable = purchaseManager.IsAdPassAvailable && !purchaseManager.IsPurchaseInProgress;
+            storeButton.interactable = purchaseManager.IsAdPassAvailable && !purchaseManager.IsPurchaseInProgress;
             priceLabel.SetText(purchaseManager.AdPassPrice);
         }
     }

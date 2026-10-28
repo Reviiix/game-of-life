@@ -8,7 +8,7 @@ namespace GameOfLife.Theming
     /// <summary>Holds the palette in use, blends to the other one when dark mode changes and recolours every registered graphic, the camera background and any listener.</summary>
     public sealed class ThemeService : IDisposable
     {
-        private const int ExpectedGraphicCount = 128;
+        private const int ExpectedGraphicCount = 256;
 
         private readonly List<ThemedGraphic> themedGraphics = new(ExpectedGraphicCount);
         private readonly ThemePalette currentPalette = new();

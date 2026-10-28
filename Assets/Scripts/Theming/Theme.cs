@@ -1,6 +1,7 @@
 using DG.Tweening;
 using GameOfLife.Motion;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace GameOfLife.Theming
 {
@@ -17,6 +18,10 @@ namespace GameOfLife.Theming
         [SerializeField, Range(0f, 0.4f)] private float tileGap = 0.14f;
         [Tooltip("How round the tile corners are: 0 is square and 1 is fully round.")]
         [SerializeField, Range(0f, 1f)] private float tileRoundness = 0.45f;
+        [Tooltip("How much of its colour a pattern ghost's tiles show; the rest is the background colour, so the ghost looks faded yet still stands out over cells of its own colour.")]
+        [SerializeField, Range(0f, 1f)] private float ghostTileOpacity = 0.6f;
+        [Tooltip("How far a cell placed while a game runs blends toward the background while it is fresh: 0 shows its own colour, higher values a lighter variant (a softer one in dark mode).")]
+        [SerializeField, Range(0f, 0.9f)] private float freshCellBackgroundBlend = 0.45f;
 
         [Header("Cell Motion")]
         [Tooltip("A cell coming alive or being placed grows from nothing.")]
@@ -25,10 +30,13 @@ namespace GameOfLife.Theming
         [SerializeField] private EasedMotion cellDisappear = new(0.24f, Ease.InBack);
         [Tooltip("An absorbed cell squashes, changes colour and springs back.")]
         [SerializeField] private EasedMotion cellConvert = new(0.6f, Ease.OutElastic, 1f, 0.2f);
+        [Tooltip("A fresh cell blends back to its own colour, without changing size, once its fresh generations are over.")]
+        [SerializeField] private EasedMotion cellSettle = new(0.5f, Ease.InOutSine);
         [Tooltip("How small an absorbed cell squashes before springing back.")]
         [SerializeField, Range(0.1f, 1f)] private float convertSquashScale = 0.5f;
-        [Tooltip("Share of the absorb animation spent changing colour.")]
-        [SerializeField, Range(0.05f, 1f)] private float convertColourShare = 0.3f;
+        [Tooltip("Share of a colour-changing cell's animation spent blending to its new colour: an absorbed cell, or a cell that comes back while still shrinking.")]
+        [FormerlySerializedAs("convertColourShare")]
+        [SerializeField, Range(0.05f, 1f)] private float colourChangeShare = 0.3f;
         [Tooltip("Cell animations never last longer than this share of the time between generations, so fast games stay readable.")]
         [SerializeField, Range(0.1f, 1f)] private float cellMotionShareOfGeneration = 0.9f;
 
@@ -57,11 +65,14 @@ namespace GameOfLife.Theming
         public ThemePalette LightPalette => lightPalette;
         public float TileGap => tileGap;
         public float TileRoundness => tileRoundness;
+        public float GhostTileOpacity => ghostTileOpacity;
+        public float FreshCellBackgroundBlend => freshCellBackgroundBlend;
         public EasedMotion CellAppear => cellAppear;
         public EasedMotion CellDisappear => cellDisappear;
         public EasedMotion CellConvert => cellConvert;
+        public EasedMotion CellSettle => cellSettle;
         public float ConvertSquashScale => convertSquashScale;
-        public float ConvertColourShare => convertColourShare;
+        public float ColourChangeShare => colourChangeShare;
         public float CellMotionShareOfGeneration => cellMotionShareOfGeneration;
         public EasedMotion ScreenShow => screenShow;
         public float ScreenShowStartScale => screenShowStartScale;
