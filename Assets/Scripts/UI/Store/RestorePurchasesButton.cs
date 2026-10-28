@@ -8,14 +8,14 @@ namespace GameOfLife.UI.Store
     /// <summary>Asks the store to restore the ad pass; shown only on iOS, where Apple requires it (Android restores automatically at launch and the Editor's fake store cannot restore), disabled while restoring and hidden once owned.</summary>
     public sealed class RestorePurchasesButton : AnimatedButton
     {
-        private Button button;
+        private Button restoreButton;
         private PurchaseManager purchaseManager;
         private AdPassOwnership adPassOwnership;
 
         /// <summary>Connects to the store and ownership, then shows or hides the button.</summary>
         public void Initialise(PurchaseManager purchases, AdPassOwnership ownership)
         {
-            button = GetComponent<Button>();
+            restoreButton = GetComponent<Button>();
             purchaseManager = purchases;
             adPassOwnership = ownership;
             purchaseManager.StoreStateChanged += RefreshInteractable;
@@ -48,7 +48,7 @@ namespace GameOfLife.UI.Store
         /// <summary>Disables the button while a restore is already running, since Apple's sign-in can take several seconds.</summary>
         private void RefreshInteractable()
         {
-            button.interactable = !purchaseManager.IsRestoreInProgress;
+            restoreButton.interactable = !purchaseManager.IsRestoreInProgress;
         }
 
         /// <summary>Shows the button only where restoring is needed and only while the pass is not owned.</summary>

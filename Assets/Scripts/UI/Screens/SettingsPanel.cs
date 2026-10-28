@@ -1,3 +1,4 @@
+using System;
 using GameOfLife.Audio;
 using GameOfLife.Configuration;
 using GameOfLife.Gameplay;
@@ -29,9 +30,11 @@ namespace GameOfLife.UI.Screens
 
         [Header("Versus")]
         [SerializeField] private SliderSetting setupSquaresSetting;
+        [SerializeField] private SliderSetting setupTimeSetting;
         [SerializeField] private SliderSetting matchSquaresSetting;
         [SerializeField] private SliderSetting matchTimeSetting;
-        [SerializeField] private Toggle hardOpponentToggle;
+        [Tooltip("Steps through the opponent difficulties, showing each one's name.")]
+        [SerializeField] private SliderSetting opponentDifficultySetting;
 
         private GameOptions options;
         private AudioManager audioManager;
@@ -45,12 +48,13 @@ namespace GameOfLife.UI.Screens
             columnsSetting.Configure(settings.MinimumGridSize, settings.MaximumColumns, options.Columns, true);
             evolutionIntervalSetting.Configure(settings.MinimumEvolutionInterval, settings.MaximumEvolutionInterval, options.EvolutionInterval, false);
             setupSquaresSetting.Configure(settings.MinimumSetupSquares, settings.MaximumSetupSquares, options.VersusSetupSquares, true);
+            setupTimeSetting.Configure(settings.MinimumSetupSeconds, settings.MaximumSetupSeconds, options.VersusSetupSeconds, true);
             matchSquaresSetting.Configure(settings.MinimumMatchSquares, settings.MaximumMatchSquares, options.VersusMatchSquares, true);
             matchTimeSetting.Configure(settings.MinimumMatchSeconds, settings.MaximumMatchSeconds, options.VersusMatchSeconds, true);
+            opponentDifficultySetting.ConfigureNamed(GetDifficultyNames(), (int)options.OpponentDifficulty);
             randomColoursToggle.SetIsOnWithoutNotify(options.RandomColoursEnabled);
             gridHighlightsToggle.SetIsOnWithoutNotify(options.GridHighlightsVisible);
             darkModeToggle.SetIsOnWithoutNotify(options.DarkModeEnabled);
-            hardOpponentToggle.SetIsOnWithoutNotify(options.OpponentDifficulty == OpponentDifficulty.Hard);
             musicToggle.SetIsOnWithoutNotify(options.MusicEnabled);
             soundEffectsToggle.SetIsOnWithoutNotify(options.SoundEffectsEnabled);
 
@@ -58,15 +62,16 @@ namespace GameOfLife.UI.Screens
             columnsSetting.AddValueChangedListener(OnColumnsChanged);
             evolutionIntervalSetting.AddValueChangedListener(options.SetEvolutionInterval);
             setupSquaresSetting.AddValueChangedListener(OnSetupSquaresChanged);
+            setupTimeSetting.AddValueChangedListener(OnSetupTimeChanged);
             matchSquaresSetting.AddValueChangedListener(OnMatchSquaresChanged);
             matchTimeSetting.AddValueChangedListener(OnMatchTimeChanged);
             randomColoursToggle.onValueChanged.AddListener(options.SetRandomColoursEnabled);
             gridHighlightsToggle.onValueChanged.AddListener(options.SetGridHighlightsVisible);
             darkModeToggle.onValueChanged.AddListener(options.SetDarkModeEnabled);
-            hardOpponentToggle.onValueChanged.AddListener(OnHardOpponentChanged);
+            opponentDifficultySetting.AddValueChangedListener(OnOpponentDifficultyChanged);
             musicToggle.onValueChanged.AddListener(options.SetMusicEnabled);
             soundEffectsToggle.onValueChanged.AddListener(options.SetSoundEffectsEnabled);
-            foreach (var toggle in new[] { randomColoursToggle, gridHighlightsToggle, darkModeToggle, hardOpponentToggle, musicToggle, soundEffectsToggle })
+            foreach (var toggle in new[] { randomColoursToggle, gridHighlightsToggle, darkModeToggle, musicToggle, soundEffectsToggle })
             {
                 toggle.onValueChanged.AddListener(PlayToggleClick);
                 var toggleSwitch = toggle.GetComponent<ToggleSwitch>();
@@ -99,6 +104,12 @@ namespace GameOfLife.UI.Screens
             options.SetVersusSetupSquares((int)squares);
         }
 
+        /// <summary>Passes the new setup time on.</summary>
+        private void OnSetupTimeChanged(float seconds)
+        {
+            options.SetVersusSetupSeconds((int)seconds);
+        }
+
         /// <summary>Passes the new in-match square allowance on.</summary>
         private void OnMatchSquaresChanged(float squares)
         {
@@ -111,10 +122,22 @@ namespace GameOfLife.UI.Screens
             options.SetVersusMatchSeconds((int)seconds);
         }
 
-        /// <summary>Switches the app between Easy and Hard.</summary>
-        private void OnHardOpponentChanged(bool hard)
+        /// <summary>Sets how well the app plays from the slider's step.</summary>
+        private void OnOpponentDifficultyChanged(float step)
         {
-            options.SetOpponentDifficulty(hard ? OpponentDifficulty.Hard : OpponentDifficulty.Easy);
+            options.SetOpponentDifficulty((OpponentDifficulty)Mathf.RoundToInt(step));
+        }
+
+        /// <summary>Returns the difficulty names in enum order, upper-cased for the settings label; built once at start-up.</summary>
+        private static string[] GetDifficultyNames()
+        {
+            var names = Enum.GetNames(typeof(OpponentDifficulty));
+            for (var nameIndex = 0; nameIndex < names.Length; nameIndex++)
+            {
+                names[nameIndex] = names[nameIndex].ToUpperInvariant();
+            }
+
+            return names;
         }
     }
 }

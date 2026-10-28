@@ -1,12 +1,10 @@
 using System.Collections.Generic;
 using GameOfLife.Grid;
-using GameOfLife.Simulation;
-using GameOfLife.Theming;
 using UnityEngine;
 
 namespace GameOfLife.Effects
 {
-    /// <summary>Bursts tiles out of every absorbed cell in its new owner's colour; the particle systems pool their own particles, so a burst never instantiates anything.</summary>
+    /// <summary>Bursts tiles out of every absorbed cell in the colour the board now paints it; the particle systems pool their own particles, so a burst never instantiates anything.</summary>
     public sealed class AbsorptionEffect : MonoBehaviour
     {
         [Tooltip("Emits one soft tile per absorbed cell that swells and fades.")]
@@ -25,17 +23,15 @@ namespace GameOfLife.Effects
         [SerializeField] private Vector2 sparkLifetime = new(0.35f, 0.65f);
 
         private GridView gridView;
-        private ThemeService themeService;
 
-        /// <summary>Connects to the board whose cells the bursts come from and to the palette their colours come from.</summary>
-        public void Initialise(GridView board, ThemeService theme)
+        /// <summary>Connects to the board whose cells the bursts come from and take their colours from.</summary>
+        public void Initialise(GridView board)
         {
             gridView = board;
-            themeService = theme;
         }
 
-        /// <summary>Bursts from each converted cell in its owner's colour, thinning the cells evenly past the burst limit or the particles still free, so overlapping bursts are spread out rather than cut short.</summary>
-        public void Play(IReadOnlyList<int> convertedCellIndices, CellGrid grid)
+        /// <summary>Bursts from each converted cell in the colour it is now painted, so call it after repainting; thins the cells evenly past the burst limit or the particles still free, so overlapping bursts are spread out rather than cut short.</summary>
+        public void Play(IReadOnlyList<int> convertedCellIndices)
         {
             var cellCount = convertedCellIndices.Count;
             var burstCellCount = Mathf.Min(cellCount, Mathf.Min(maximumCellsPerBurst, CountCellsThatFit()));
@@ -47,12 +43,10 @@ namespace GameOfLife.Effects
             var cellSize = gridView.CellSize;
             var cellLength = Mathf.Min(cellSize.x, cellSize.y);
             var stride = cellCount / (float)burstCellCount;
-            var palette = themeService.Palette;
             for (var burstIndex = 0; burstIndex < burstCellCount; burstIndex++)
             {
                 var cellIndex = convertedCellIndices[(int)(burstIndex * stride)];
-                var colour = palette.Get(grid.GetOwner(cellIndex) == CellOwner.Player ? ThemeColour.Player : ThemeColour.Opponent);
-                BurstFromCell(gridView.GetCellCentre(cellIndex), colour, cellLength);
+                BurstFromCell(gridView.GetCellCentre(cellIndex), gridView.GetCellColour(cellIndex), cellLength);
             }
         }
 

@@ -14,6 +14,7 @@ namespace GameOfLife.Theming
         Danger,
         Scrim,
         Shade,
-        Raised
+        Raised,
+        Accent
     }
 }

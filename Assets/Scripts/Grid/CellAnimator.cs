@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace GameOfLife.Grid
 {
-    /// <summary>Animates cells growing in, shrinking away and changing colour by writing each changing cell's colour and tile size into its board texture pixel.</summary>
+    /// <summary>Animates cells growing in, shrinking away, changing colour and settling from fresh by writing each changing cell's colour and tile size into its board texture pixel.</summary>
     public sealed class CellAnimator
     {
         /// <summary>The largest tile size a pixel's alpha can hold; the headroom above 1 is for bouncy overshoot. GridCells.shader must use the same value.</summary>
@@ -24,8 +24,9 @@ namespace GameOfLife.Grid
         private readonly EasedMotion appear;
         private readonly EasedMotion disappear;
         private readonly EasedMotion convert;
+        private readonly EasedMotion settle;
         private readonly float convertSquashScale;
-        private readonly float convertColourShare;
+        private readonly float colourChangeShare;
         private int animatingCellCount;
         private float longestDuration = float.MaxValue;
 
@@ -35,7 +36,7 @@ namespace GameOfLife.Grid
         public bool HasActiveAnimations => animatingCellCount > 0;
 
         /// <summary>Allocates per-cell state for the largest board up front so animating never allocates.</summary>
-        public CellAnimator(int maximumCellCount, EasedMotion appear, EasedMotion disappear, EasedMotion convert, float convertSquashScale, float convertColourShare)
+        public CellAnimator(int maximumCellCount, EasedMotion appear, EasedMotion disappear, EasedMotion convert, EasedMotion settle, float convertSquashScale, float colourChangeShare)
         {
             if (maximumCellCount < 0)
             {
@@ -53,8 +54,9 @@ namespace GameOfLife.Grid
             this.appear = appear;
             this.disappear = disappear;
             this.convert = convert;
+            this.settle = settle;
             this.convertSquashScale = convertSquashScale;
-            this.convertColourShare = Mathf.Max(convertColourShare, Mathf.Epsilon);
+            this.colourChangeShare = Mathf.Max(colourChangeShare, Mathf.Epsilon);
         }
 
         /// <summary>Caps every animation at this many seconds, so cells settle before the next generation changes them again.</summary>
@@ -97,18 +99,21 @@ namespace GameOfLife.Grid
                 return;
             }
 
-            var shownPixel = pixels[cellIndex];
-            motionKinds[cellIndex] = !wasAlive ? CellMotionKind.Appear : alive ? CellMotionKind.Convert : CellMotionKind.Disappear;
-            startColours[cellIndex] = shownPixel.a != 0 ? WithAlpha(shownPixel, OpaqueAlpha) : previousColour;
-            startScales[cellIndex] = DecodeScale(shownPixel.a);
-            motionStartTimes[cellIndex] = now;
-            isAnimating[cellIndex] = true;
-            if (!isListed[cellIndex])
+            var kind = !wasAlive ? CellMotionKind.Appear : alive ? CellMotionKind.Convert : CellMotionKind.Disappear;
+            StartMotion(cellIndex, kind, wasAlive ? previousColour : targetColours[cellIndex], now, pixels);
+        }
+
+        /// <summary>Blends a living cell to a new colour without squashing it, continuing from the size and colour its pixel shows now, as when a fresh cell settles; an empty cell or an unchanged colour does nothing.</summary>
+        public void RecolourCell(int cellIndex, Color32 colour, float now, NativeArray<Color32> pixels)
+        {
+            var previousColour = targetColours[cellIndex];
+            if (previousColour.a == 0 || HasSameColour(previousColour, colour))
             {
-                isListed[cellIndex] = true;
-                animatingCellIndices[animatingCellCount] = cellIndex;
-                animatingCellCount++;
+                return;
             }
+
+            targetColours[cellIndex] = WithAlpha(colour, OpaqueAlpha);
+            StartMotion(cellIndex, CellMotionKind.Settle, previousColour, now, pixels);
         }
 
         /// <summary>Changes a cell's look at once without animating, such as when the palette changes; its list entry is dropped on the next Advance.</summary>
@@ -182,20 +187,30 @@ namespace GameOfLife.Grid
             switch (kind)
             {
                 case CellMotionKind.Appear:
-                    pixels[cellIndex] = WithAlpha(targetColours[cellIndex], EncodeScale(Mathf.LerpUnclamped(startScale, 1f, progress)));
+                    var appearColour = Color32.Lerp(startColours[cellIndex], targetColours[cellIndex], GetColourChange(elapsed, duration));
+                    pixels[cellIndex] = WithAlpha(appearColour, EncodeScale(Mathf.LerpUnclamped(startScale, 1f, progress)));
                     break;
                 case CellMotionKind.Disappear:
                     pixels[cellIndex] = WithAlpha(startColours[cellIndex], EncodeScale(Mathf.LerpUnclamped(startScale, 0f, progress)));
                     break;
+                case CellMotionKind.Settle:
+                    var settleColour = Color32.Lerp(startColours[cellIndex], targetColours[cellIndex], progress);
+                    pixels[cellIndex] = WithAlpha(settleColour, EncodeScale(Mathf.LerpUnclamped(startScale, 1f, progress)));
+                    break;
                 default:
-                    var colourChange = Mathf.Clamp01(elapsed / (duration * convertColourShare));
-                    var colour = Color32.Lerp(startColours[cellIndex], targetColours[cellIndex], colourChange);
+                    var convertColour = Color32.Lerp(startColours[cellIndex], targetColours[cellIndex], GetColourChange(elapsed, duration));
                     var squashedScale = Mathf.Min(startScale, convertSquashScale);
-                    pixels[cellIndex] = WithAlpha(colour, EncodeScale(Mathf.LerpUnclamped(squashedScale, 1f, progress)));
+                    pixels[cellIndex] = WithAlpha(convertColour, EncodeScale(Mathf.LerpUnclamped(squashedScale, 1f, progress)));
                     break;
             }
 
             return true;
+        }
+
+        /// <summary>Returns how far a changing cell has blended from its shown colour to its new one, finishing within the theme's colour share of the motion.</summary>
+        private float GetColourChange(float elapsed, float duration)
+        {
+            return Mathf.Clamp01(elapsed / (duration * colourChangeShare));
         }
 
         /// <summary>Returns the eased motion for an animation kind.</summary>
@@ -207,8 +222,27 @@ namespace GameOfLife.Grid
                     return appear;
                 case CellMotionKind.Disappear:
                     return disappear;
+                case CellMotionKind.Settle:
+                    return settle;
                 default:
                     return convert;
+            }
+        }
+
+        /// <summary>Starts a cell's animation from the colour and size its pixel shows now, or from the fallback colour while its pixel is empty, and lists it for Advance.</summary>
+        private void StartMotion(int cellIndex, CellMotionKind kind, Color32 fallbackStartColour, float now, NativeArray<Color32> pixels)
+        {
+            var shownPixel = pixels[cellIndex];
+            motionKinds[cellIndex] = kind;
+            startColours[cellIndex] = shownPixel.a != 0 ? WithAlpha(shownPixel, OpaqueAlpha) : fallbackStartColour;
+            startScales[cellIndex] = DecodeScale(shownPixel.a);
+            motionStartTimes[cellIndex] = now;
+            isAnimating[cellIndex] = true;
+            if (!isListed[cellIndex])
+            {
+                isListed[cellIndex] = true;
+                animatingCellIndices[animatingCellCount] = cellIndex;
+                animatingCellCount++;
             }
         }
 

@@ -8,7 +8,7 @@ using UnityEngine.UI;
 
 namespace GameOfLife.Grid
 {
-    /// <summary>Draws the board as one quad of rounded tiles; one texture pixel per cell holds its colour and animated tile size, and the theme supplies every colour.</summary>
+    /// <summary>Draws the board as one quad of rounded tiles; one texture pixel per cell holds its colour and animated tile size, the theme supplies every colour, and a second instance draws the pattern ghost.</summary>
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class GridView : MaskableGraphic
     {
@@ -25,6 +25,7 @@ namespace GameOfLife.Grid
         private CellAnimator cellAnimator;
         private CellPaint[] cellPaints;
         private Color32[] customCellColours;
+        private bool[] freshCells;
         private Texture2D cellTexture;
         private NativeArray<Color32> cellPixels;
         private Texture2D editModePreviewTexture;
@@ -52,13 +53,20 @@ namespace GameOfLife.Grid
         /// <summary>Allocates the cell texture and per-cell state for the largest board once and starts following the theme; Resize sets the board's dimensions.</summary>
         public void Initialise(GameSettings settings, ThemeService theme, bool showHighlights)
         {
+            Initialise(settings.MaximumRows, settings.MaximumColumns, theme, showHighlights);
+        }
+
+        /// <summary>Allocates the cell texture and per-cell state for a board of at most the given size, such as a small demo board, and starts following the theme.</summary>
+        public void Initialise(int maximumRows, int maximumColumns, ThemeService theme, bool showHighlights)
+        {
             themeService = theme;
-            var maximumCellCount = settings.MaximumRows * settings.MaximumColumns;
+            var maximumCellCount = maximumRows * maximumColumns;
             var motion = theme.Theme;
-            cellAnimator = new CellAnimator(maximumCellCount, motion.CellAppear, motion.CellDisappear, motion.CellConvert, motion.ConvertSquashScale, motion.ConvertColourShare);
+            cellAnimator = new CellAnimator(maximumCellCount, motion.CellAppear, motion.CellDisappear, motion.CellConvert, motion.CellSettle, motion.ConvertSquashScale, motion.ColourChangeShare);
             cellAnimationTicker = new FrameTicker(AdvanceCellAnimations);
             cellPaints = new CellPaint[maximumCellCount];
             customCellColours = new Color32[maximumCellCount];
+            freshCells = new bool[maximumCellCount];
             cellTexture = new Texture2D(1, 1, TextureFormat.RGBA32, false)
             {
                 name = "GridCells",
@@ -82,6 +90,7 @@ namespace GameOfLife.Grid
             for (var cellIndex = 0; cellIndex < CellCount; cellIndex++)
             {
                 cellPaints[cellIndex] = CellPaint.Empty;
+                freshCells[cellIndex] = false;
             }
 
             cellAnimator.Clear(CellCount, cellPixels);
@@ -89,18 +98,31 @@ namespace GameOfLife.Grid
             SetVerticesDirty();
         }
 
-        /// <summary>Stages a cell's new look in a palette colour, animating from its old look; call ApplyPaintedCells once all changes are staged.</summary>
-        public void PaintCell(int cellIndex, CellPaint paint)
+        /// <summary>Stages a cell's new look in a palette colour, in its lighter fresh variant when asked, animating from its old look; call ApplyPaintedCells once all changes are staged.</summary>
+        public void PaintCell(int cellIndex, CellPaint paint, bool fresh = false)
         {
             cellPaints[cellIndex] = paint;
+            freshCells[cellIndex] = fresh && paint != CellPaint.Empty;
             cellAnimator.SetCell(cellIndex, GetPaintColour(cellIndex), paint != CellPaint.Empty, Time.time, cellPixels);
         }
 
-        /// <summary>Stages a living cell in a colour of its own, such as a random colour, animating from its old look.</summary>
-        public void PaintCell(int cellIndex, Color32 customColour)
+        /// <summary>Stages a living cell in a colour of its own, such as a random colour, in its lighter fresh variant when asked, animating from its old look.</summary>
+        public void PaintCell(int cellIndex, Color32 customColour, bool fresh = false)
         {
             customCellColours[cellIndex] = customColour;
-            PaintCell(cellIndex, CellPaint.Custom);
+            PaintCell(cellIndex, CellPaint.Custom, fresh);
+        }
+
+        /// <summary>Blends a fresh cell back to its own colour without squashing it; call ApplyPaintedCells once all are staged. Cells that are not fresh are left alone.</summary>
+        public void SettleCell(int cellIndex)
+        {
+            if (!freshCells[cellIndex])
+            {
+                return;
+            }
+
+            freshCells[cellIndex] = false;
+            cellAnimator.RecolourCell(cellIndex, GetPaintColour(cellIndex), Time.time, cellPixels);
         }
 
         /// <summary>Draws the first frame of every staged change, uploads the texture once and keeps animating every frame until every cell has settled.</summary>
@@ -109,6 +131,41 @@ namespace GameOfLife.Grid
             if (AdvanceCellAnimations() && isActiveAndEnabled)
             {
                 cellAnimationTicker.Start();
+            }
+        }
+
+        /// <summary>Stages a cell's new look without animating it, for a recolour that must not squash; call ApplyPaintedCells to upload it.</summary>
+        public void PaintCellImmediately(int cellIndex, CellPaint paint)
+        {
+            cellPaints[cellIndex] = paint;
+            freshCells[cellIndex] = false;
+            cellAnimator.SetCellImmediately(cellIndex, GetPaintColour(cellIndex), paint != CellPaint.Empty, cellPixels);
+        }
+
+        /// <summary>Stages a living cell in a colour of its own without animating it; call ApplyPaintedCells to upload it.</summary>
+        public void PaintCellImmediately(int cellIndex, Color32 customColour)
+        {
+            customCellColours[cellIndex] = customColour;
+            PaintCellImmediately(cellIndex, CellPaint.Custom);
+        }
+
+        /// <summary>Returns the theme role a palette paint is drawn in; Empty and Custom have none and return Background.</summary>
+        public static ThemeColour GetThemeColour(CellPaint paint)
+        {
+            switch (paint)
+            {
+                case CellPaint.Ink:
+                    return ThemeColour.Ink;
+                case CellPaint.Player:
+                    return ThemeColour.Player;
+                case CellPaint.Opponent:
+                    return ThemeColour.Opponent;
+                case CellPaint.Danger:
+                    return ThemeColour.Danger;
+                case CellPaint.Accent:
+                    return ThemeColour.Accent;
+                default:
+                    return ThemeColour.Background;
             }
         }
 
@@ -156,7 +213,23 @@ namespace GameOfLife.Grid
             return true;
         }
 
-        /// <summary>Builds the board quad and passes grid size, cell size, tile gap and corner radius to the shader through spare UV channels.</summary>
+        /// <summary>Finds the cell nearest a screen position, treating positions past any edge as that edge's cell, so a drag off the board still follows it; false only when the position cannot be mapped or the board is empty.</summary>
+        public bool TryGetNearestCellIndexAtScreenPosition(Vector2 screenPosition, Camera eventCamera, out int cellIndex)
+        {
+            cellIndex = -1;
+            if (CellCount == 0 || !RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, screenPosition, eventCamera, out var localPosition))
+            {
+                return false;
+            }
+
+            var normalisedPosition = Rect.PointToNormalized(rectTransform.rect, localPosition);
+            var column = Mathf.Clamp(Mathf.FloorToInt(normalisedPosition.x * columns), 0, columns - 1);
+            var rowFromTop = Mathf.Clamp(Mathf.FloorToInt((1f - normalisedPosition.y) * rows), 0, rows - 1);
+            cellIndex = rowFromTop * columns + column;
+            return true;
+        }
+
+        /// <summary>Builds the board quad and passes grid size, cell size, tile gap, corner radius and empty-tile opacity to the shader through spare UV channels, leaving the vertex alpha for the canvas so fades reach every tile.</summary>
         protected override void OnPopulateMesh(VertexHelper vertexHelper)
         {
             vertexHelper.Clear();
@@ -175,13 +248,11 @@ namespace GameOfLife.Grid
             var tileGap = theme ? theme.TileGap * shorterCellSide : 0f;
             var cornerRadius = theme ? theme.TileRoundness * (shorterCellSide - tileGap) * FullyRoundRadiusPerTileSide : 0f;
             var emptyTileColour = GetEmptyTileColour(theme);
-            if (!showHighlights)
-            {
-                emptyTileColour.a = 0;
-            }
+            var emptyTileOpacity = showHighlights ? emptyTileColour.a / 255f : 0f;
+            emptyTileColour.a = byte.MaxValue;
 
             var gridShape = new Vector4(drawnColumns, drawnRows, cellSize.x, cellSize.y);
-            var tileShape = new Vector4(tileGap, cornerRadius, 0f, 0f);
+            var tileShape = new Vector4(tileGap, cornerRadius, emptyTileOpacity, 0f);
             AddVertex(vertexHelper, new Vector2(bounds.xMin, bounds.yMin), new Vector2(0f, 1f), gridShape, tileShape, emptyTileColour);
             AddVertex(vertexHelper, new Vector2(bounds.xMin, bounds.yMax), new Vector2(0f, 0f), gridShape, tileShape, emptyTileColour);
             AddVertex(vertexHelper, new Vector2(bounds.xMax, bounds.yMax), new Vector2(1f, 0f), gridShape, tileShape, emptyTileColour);
@@ -252,23 +323,29 @@ namespace GameOfLife.Grid
             SetVerticesDirty();
         }
 
-        /// <summary>Returns the colour a cell's paint stands for in the current palette.</summary>
+        /// <summary>Returns the colour a cell is painted in the current palette, the colour it settles on once any animation ends.</summary>
+        public Color32 GetCellColour(int cellIndex)
+        {
+            return GetPaintColour(cellIndex);
+        }
+
+        /// <summary>Returns the colour a cell's paint stands for in the current palette, blended toward the background while the cell is fresh.</summary>
         private Color32 GetPaintColour(int cellIndex)
         {
-            var palette = themeService.Palette;
+            Color32 colour;
             switch (cellPaints[cellIndex])
             {
-                case CellPaint.Ink:
-                    return palette.Get(ThemeColour.Ink);
-                case CellPaint.Player:
-                    return palette.Get(ThemeColour.Player);
-                case CellPaint.Opponent:
-                    return palette.Get(ThemeColour.Opponent);
-                case CellPaint.Custom:
-                    return customCellColours[cellIndex];
-                default:
+                case CellPaint.Empty:
                     return default;
+                case CellPaint.Custom:
+                    colour = customCellColours[cellIndex];
+                    break;
+                default:
+                    colour = themeService.Palette.Get(GetThemeColour(cellPaints[cellIndex]));
+                    break;
             }
+
+            return freshCells[cellIndex] ? Color32.Lerp(colour, themeService.Palette.Get(ThemeColour.Background), themeService.Theme.FreshCellBackgroundBlend) : colour;
         }
 
         /// <summary>Returns the colour of the faint tiles marking empty cells, from the live palette or, in Edit mode, the preview theme's light palette.</summary>
@@ -313,10 +390,11 @@ namespace GameOfLife.Grid
             return editModePreviewTexture;
         }
 
-        /// <summary>Logs a warning when the parent canvas does not pass the extra UV channels the grid shader needs.</summary>
+        /// <summary>Logs a warning when the parent canvas does not pass the extra UV channels the grid shader needs; finds the canvas even while it is disabled, as a hidden dialog's is.</summary>
         private void WarnIfCanvasLacksShaderChannels()
         {
-            if ((canvas.rootCanvas.additionalShaderChannels & RequiredShaderChannels) != RequiredShaderChannels)
+            var parentCanvas = canvas ? canvas : GetComponentInParent<Canvas>(true);
+            if (parentCanvas && (parentCanvas.rootCanvas.additionalShaderChannels & RequiredShaderChannels) != RequiredShaderChannels)
             {
                 Debug.LogWarning($"{name}: enable TexCoord1 and TexCoord2 in the root Canvas's Additional Shader Channels or the tiles will not draw.", this);
             }

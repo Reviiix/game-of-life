@@ -5,6 +5,7 @@ namespace GameOfLife.Grid
     {
         Appear,
         Disappear,
-        Convert
+        Convert,
+        Settle
     }
 }

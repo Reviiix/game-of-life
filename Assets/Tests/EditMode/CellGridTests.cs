@@ -1,16 +1,34 @@
 using System;
+using System.Collections.Generic;
 using GameOfLife.Simulation;
 using NUnit.Framework;
 
 namespace GameOfLife.Tests
 {
-    /// <summary>Checks the two-colour Conway rules, grid geometry and change tracking of CellGrid.</summary>
+    /// <summary>Checks CellGrid's Conway rules in up to four colours (majority and missing-colour newborns, decided from the board before it changes), grid geometry and change tracking.</summary>
     [TestFixture]
     public sealed class CellGridTests
     {
         private const char EmptySymbol = '.';
         private const char PlayerSymbol = 'P';
         private const char OpponentSymbol = 'O';
+        private const char ThirdSymbol = 'T';
+        private const char FourthSymbol = 'F';
+        private const char UnexpectedOwnerSymbol = '?';
+        private const int RandomBoardSize = 20;
+        private const int RandomSeed = 1234;
+        private const double RandomFillChance = 0.35;
+        private const int ManyGenerations = 100;
+        private const int NeighboursNeededToSurviveMinimum = 2;
+        private const int NeighboursNeededToSurviveMaximum = 3;
+        private const int NeighboursNeededToBeBorn = 3;
+        private const int ParentsNeededForAMajority = 2;
+
+        /// <summary>Every colour a living cell can have.</summary>
+        private static readonly CellOwner[] LivingOwners = { CellOwner.Player, CellOwner.Opponent, CellOwner.Third, CellOwner.Fourth };
+
+        /// <summary>Versus's two colours.</summary>
+        private static readonly CellOwner[] VersusOwners = { CellOwner.Player, CellOwner.Opponent };
 
         /// <summary>A blinker flips between horizontal and vertical every generation.</summary>
         [Test]
@@ -246,40 +264,21 @@ namespace GameOfLife.Tests
         [Test]
         public void PlayerOnlyBoard_NeverProducesOpponentCells()
         {
-            var grid = CreateEmptyGrid(20, 20);
-            var random = new Random(1234);
+            var grid = CreateEmptyGrid(RandomBoardSize, RandomBoardSize);
+            var random = new Random(RandomSeed);
             for (var cellIndex = 0; cellIndex < grid.CellCount; cellIndex++)
             {
-                if (random.NextDouble() < 0.35)
+                if (random.NextDouble() < RandomFillChance)
                 {
-                    grid.ToggleCell(cellIndex);
+                    grid.SetOwner(cellIndex, CellOwner.Player);
                 }
             }
 
-            for (var generation = 0; generation < 100; generation++)
+            for (var generation = 0; generation < ManyGenerations; generation++)
             {
                 grid.AdvanceGeneration();
                 Assert.That(grid.CountCells(CellOwner.Opponent), Is.Zero);
             }
-        }
-
-        /// <summary>Toggling switches a cell between empty and Player and records each change.</summary>
-        [Test]
-        public void ToggleCell_SwitchesBetweenEmptyAndPlayer()
-        {
-            var grid = CreateEmptyGrid(3, 3);
-            var cellIndex = grid.ToCellIndex(1, 1);
-
-            grid.ToggleCell(cellIndex);
-            Assert.That(grid.GetOwner(cellIndex), Is.EqualTo(CellOwner.Player));
-            Assert.That(grid.IsAlive(cellIndex), Is.True);
-            Assert.That(grid.ChangedCellIndices, Is.EqualTo(new[] { cellIndex }));
-
-            grid.ClearChangedCells();
-            grid.ToggleCell(cellIndex);
-            Assert.That(grid.GetOwner(cellIndex), Is.EqualTo(CellOwner.None));
-            Assert.That(grid.IsAlive(cellIndex), Is.False);
-            Assert.That(grid.ChangedCellIndices, Is.EqualTo(new[] { cellIndex }));
         }
 
         /// <summary>Counting by owner counts living cells per side and empty cells for None.</summary>
@@ -331,9 +330,9 @@ namespace GameOfLife.Tests
         public void ChangedCellIndices_AccumulatesAcrossGenerationsUntilCleared()
         {
             var grid = CreateEmptyGrid(5, 5);
-            grid.ToggleCell(grid.ToCellIndex(2, 1));
-            grid.ToggleCell(grid.ToCellIndex(2, 2));
-            grid.ToggleCell(grid.ToCellIndex(2, 3));
+            grid.SetOwner(grid.ToCellIndex(2, 1), CellOwner.Player);
+            grid.SetOwner(grid.ToCellIndex(2, 2), CellOwner.Player);
+            grid.SetOwner(grid.ToCellIndex(2, 3), CellOwner.Player);
             Assert.That(grid.ChangedCellIndices, Is.EqualTo(new[] { 11, 12, 13 }));
 
             grid.AdvanceGeneration();
@@ -512,7 +511,6 @@ namespace GameOfLife.Tests
             Assert.Throws<ArgumentException>(() => copy.CopyFrom(source));
         }
 
-        /// <summary>Creates an empty grid sized exactly to the given dimensions.</summary>
         /// <summary>HasLivingNeighbour sees living cells of either colour on all eight sides, including diagonals, and ignores the cell itself.</summary>
         [Test]
         public void HasLivingNeighbour_SeesEitherColourOnAllEightSides()
@@ -532,6 +530,171 @@ namespace GameOfLife.Tests
             Assert.That(grid.HasLivingNeighbour(grid.ToCellIndex(0, 4)), Is.False);
         }
 
+        /// <summary>A newborn takes the colour two of its three parents share, for every pair of the four colours and wherever the odd parent stands.</summary>
+        [TestCase(CellOwner.Player, CellOwner.Opponent)]
+        [TestCase(CellOwner.Player, CellOwner.Third)]
+        [TestCase(CellOwner.Player, CellOwner.Fourth)]
+        [TestCase(CellOwner.Opponent, CellOwner.Player)]
+        [TestCase(CellOwner.Opponent, CellOwner.Third)]
+        [TestCase(CellOwner.Opponent, CellOwner.Fourth)]
+        [TestCase(CellOwner.Third, CellOwner.Player)]
+        [TestCase(CellOwner.Third, CellOwner.Opponent)]
+        [TestCase(CellOwner.Third, CellOwner.Fourth)]
+        [TestCase(CellOwner.Fourth, CellOwner.Player)]
+        [TestCase(CellOwner.Fourth, CellOwner.Opponent)]
+        [TestCase(CellOwner.Fourth, CellOwner.Third)]
+        public void NewbornCell_TakesTheColourTwoOfItsParentsShare(CellOwner majority, CellOwner minority)
+        {
+            AssertNewbornsOfParentRow(minority, majority, majority, majority);
+            AssertNewbornsOfParentRow(majority, minority, majority, majority);
+            AssertNewbornsOfParentRow(majority, majority, minority, majority);
+        }
+
+        /// <summary>A newborn whose three parents all differ takes the one living colour none of them has, whatever order the parents stand in.</summary>
+        [TestCase(CellOwner.Player, CellOwner.Opponent, CellOwner.Third, CellOwner.Fourth)]
+        [TestCase(CellOwner.Fourth, CellOwner.Player, CellOwner.Opponent, CellOwner.Third)]
+        [TestCase(CellOwner.Third, CellOwner.Fourth, CellOwner.Player, CellOwner.Opponent)]
+        [TestCase(CellOwner.Opponent, CellOwner.Third, CellOwner.Fourth, CellOwner.Player)]
+        public void NewbornCell_WithThreeDifferentParents_TakesTheMissingColour(CellOwner first, CellOwner second, CellOwner third, CellOwner missing)
+        {
+            AssertNewbornsOfParentRow(first, second, third, missing);
+            AssertNewbornsOfParentRow(second, third, first, missing);
+            AssertNewbornsOfParentRow(third, first, second, missing);
+        }
+
+        /// <summary>Every cell is decided from the board as it was: parents that die this generation still count, and a cell born beside a newborn this generation is not one of its parents.</summary>
+        [Test]
+        public void NewbornCell_IsDecidedFromTheBoardBeforeAnyCellChanges()
+        {
+            // (2,2)'s parents are the two Third cells above it and the Fourth cell below it; all three die this generation.
+            // (2,1), earlier in cell order, is born Fourth from one Third and two Fourth parents. Updating cells in place would
+            // drop the dead Third parents and count the new Fourth cell instead, turning (2,2) Fourth.
+            var grid = CreateGrid(
+                ".....",
+                ".T.T.",
+                ".....",
+                "F.F..",
+                ".....");
+
+            grid.AdvanceGeneration();
+
+            Assert.That(DescribeGrid(grid), Is.EqualTo(new[]
+            {
+                ".....",
+                ".....",
+                ".FT..",
+                ".....",
+                "....."
+            }), "(2,2) should be born Third from its two Third parents, which still count although they die this generation, and (2,1), born beside it, should not count as a parent.");
+            Assert.That(grid.ChangedCellIndices, Is.EqualTo(new[]
+            {
+                grid.ToCellIndex(1, 1),
+                grid.ToCellIndex(1, 3),
+                grid.ToCellIndex(2, 1),
+                grid.ToCellIndex(2, 2),
+                grid.ToCellIndex(3, 0),
+                grid.ToCellIndex(3, 2)
+            }), "Every death and birth should be recorded once, in ascending cell order.");
+        }
+
+        /// <summary>An empty board has no colours, so nothing can absorb.</summary>
+        [Test]
+        public void HasLivingCellsOfMoreThanOneOwner_OnAnEmptyBoard_IsFalse()
+        {
+            var grid = CreateEmptyGrid(3, 3);
+
+            Assert.That(grid.HasLivingCellsOfMoreThanOneOwner(), Is.False, "An empty board has no living owners at all.");
+        }
+
+        /// <summary>A board of one colour has nothing to absorb, however its cells are spread.</summary>
+        [TestCase(CellOwner.Player)]
+        [TestCase(CellOwner.Opponent)]
+        [TestCase(CellOwner.Third)]
+        [TestCase(CellOwner.Fourth)]
+        public void HasLivingCellsOfMoreThanOneOwner_WithOneColour_IsFalse(CellOwner owner)
+        {
+            var grid = CreateEmptyGrid(3, 3);
+            grid.SetOwner(0, owner);
+            grid.SetOwner(grid.CellCount / 2, owner);
+            grid.SetOwner(grid.CellCount - 1, owner);
+
+            Assert.That(grid.HasLivingCellsOfMoreThanOneOwner(), Is.False, $"A board of only {owner} cells has one living owner.");
+        }
+
+        /// <summary>Two colours are found wherever they are, even when the second colour is only in the last cell.</summary>
+        [TestCase(CellOwner.Player, CellOwner.Opponent)]
+        [TestCase(CellOwner.Opponent, CellOwner.Player)]
+        [TestCase(CellOwner.Player, CellOwner.Third)]
+        [TestCase(CellOwner.Third, CellOwner.Fourth)]
+        [TestCase(CellOwner.Fourth, CellOwner.Opponent)]
+        public void HasLivingCellsOfMoreThanOneOwner_WithTwoColours_IsTrue(CellOwner firstOwner, CellOwner secondOwner)
+        {
+            var grid = CreateEmptyGrid(3, 3);
+            grid.SetOwner(0, firstOwner);
+            grid.SetOwner(grid.CellCount / 2, firstOwner);
+            grid.SetOwner(grid.CellCount - 1, secondOwner);
+
+            Assert.That(grid.HasLivingCellsOfMoreThanOneOwner(), Is.True, $"{firstOwner} cells and one {secondOwner} cell in the last cell are two living owners.");
+        }
+
+        /// <summary>Only the active area counts: stale cells of another colour past a smaller copied board are ignored.</summary>
+        [Test]
+        public void HasLivingCellsOfMoreThanOneOwner_IgnoresStaleCellsPastTheActiveArea()
+        {
+            var source = CreateGrid(
+                "P..",
+                ".P.");
+            var copy = CreateEmptyGrid(4, 4);
+            for (var cellIndex = 0; cellIndex < copy.CellCount; cellIndex++)
+            {
+                copy.SetOwner(cellIndex, CellOwner.Opponent);
+            }
+
+            copy.CopyFrom(source);
+
+            Assert.That(copy.HasLivingCellsOfMoreThanOneOwner(), Is.False, "The copied board holds only Player cells; the stale Opponent cells past it are outside the active area.");
+        }
+
+        /// <summary>A board of only one of Classic's extra colours, or only Opponent, never produces any other colour, as a Player-only board never does.</summary>
+        [TestCase(CellOwner.Opponent)]
+        [TestCase(CellOwner.Third)]
+        [TestCase(CellOwner.Fourth)]
+        public void SingleColourBoard_NeverProducesAnotherColour(CellOwner owner)
+        {
+            var grid = CreateEmptyGrid(RandomBoardSize, RandomBoardSize);
+            FillRandomly(grid, RandomSeed, owner);
+
+            for (var generation = 1; generation <= ManyGenerations; generation++)
+            {
+                grid.AdvanceGeneration();
+                Assert.That(grid.CountCells(owner) + grid.CountCells(CellOwner.None), Is.EqualTo(grid.CellCount), $"Generation {generation} of a {owner}-only board should hold only {owner} and empty cells.");
+            }
+
+            Assert.That(grid.HasAnyLivingCell(), Is.True, "The board should still be alive, or the check proved little.");
+        }
+
+        /// <summary>A random board in Versus's two colours evolves exactly like a plain reference implementation of Conway's rules with majority-colour newborns, cell for cell and change for change.</summary>
+        [TestCase(RandomBoardSize, RandomBoardSize, RandomSeed)]
+        [TestCase(13, 29, 42)]
+        [TestCase(31, 7, 99)]
+        public void RandomTwoColourBoard_EvolvesLikeAReferenceImplementation(int rows, int columns, int seed)
+        {
+            var birthsFromThreeColours = AssertEvolvesLikeTheReference(rows, columns, seed, VersusOwners);
+
+            Assert.That(birthsFromThreeColours, Is.Zero, "Two colours can never give a newborn three different parents.");
+        }
+
+        /// <summary>A random board in all four colours evolves exactly like the reference implementation, including newborns of three different parents taking the missing colour.</summary>
+        [TestCase(RandomBoardSize, RandomBoardSize, RandomSeed)]
+        [TestCase(17, 23, 7)]
+        public void RandomFourColourBoard_EvolvesLikeAReferenceImplementation(int rows, int columns, int seed)
+        {
+            var birthsFromThreeColours = AssertEvolvesLikeTheReference(rows, columns, seed, LivingOwners);
+
+            Assert.That(birthsFromThreeColours, Is.GreaterThan(0), "Some newborn should have had three different parents, or the missing-colour rule went untested.");
+        }
+
+        /// <summary>Creates an empty grid sized exactly to the given dimensions.</summary>
         private static CellGrid CreateEmptyGrid(int rows, int columns)
         {
             var grid = new CellGrid(rows, columns);
@@ -539,7 +702,7 @@ namespace GameOfLife.Tests
             return grid;
         }
 
-        /// <summary>Builds a grid from rows of text where '.' is empty, 'P' is Player and 'O' is Opponent, with no recorded changes.</summary>
+        /// <summary>Builds a grid from rows of text where '.' is empty, 'P' is Player, 'O' is Opponent, 'T' is Third and 'F' is Fourth, with no recorded changes.</summary>
         private static CellGrid CreateGrid(params string[] rows)
         {
             var grid = CreateEmptyGrid(rows.Length, rows[0].Length);
@@ -582,6 +745,10 @@ namespace GameOfLife.Tests
                     return CellOwner.Player;
                 case OpponentSymbol:
                     return CellOwner.Opponent;
+                case ThirdSymbol:
+                    return CellOwner.Third;
+                case FourthSymbol:
+                    return CellOwner.Fourth;
                 case EmptySymbol:
                     return CellOwner.None;
                 default:
@@ -589,7 +756,7 @@ namespace GameOfLife.Tests
             }
         }
 
-        /// <summary>Converts an owner into its pattern character.</summary>
+        /// <summary>Converts an owner into its pattern character, or '?' for a value that is not a CellOwner, so a broken colour never looks empty.</summary>
         private static char ToSymbol(CellOwner owner)
         {
             switch (owner)
@@ -598,9 +765,173 @@ namespace GameOfLife.Tests
                     return PlayerSymbol;
                 case CellOwner.Opponent:
                     return OpponentSymbol;
-                default:
+                case CellOwner.Third:
+                    return ThirdSymbol;
+                case CellOwner.Fourth:
+                    return FourthSymbol;
+                case CellOwner.None:
                     return EmptySymbol;
+                default:
+                    return UnexpectedOwnerSymbol;
             }
+        }
+
+        /// <summary>Places three parents side by side in the middle row of a 5x5 board, advances one generation and checks the newborns above and below the middle parent take the expected colour while the middle parent survives in its own.</summary>
+        private static void AssertNewbornsOfParentRow(CellOwner left, CellOwner middle, CellOwner right, CellOwner expectedNewborn)
+        {
+            var grid = CreateGrid(
+                ".....",
+                ".....",
+                new string(new[] { EmptySymbol, ToSymbol(left), ToSymbol(middle), ToSymbol(right), EmptySymbol }),
+                ".....",
+                ".....");
+            var newborn = ToSymbol(expectedNewborn);
+
+            grid.AdvanceGeneration();
+
+            Assert.That(DescribeGrid(grid), Is.EqualTo(new[]
+            {
+                ".....",
+                $"..{newborn}..",
+                $"..{ToSymbol(middle)}..",
+                $"..{newborn}..",
+                "....."
+            }), $"Parents {left}, {middle}, {right} should give newborns of {expectedNewborn} above and below, with the middle {middle} surviving.");
+        }
+
+        /// <summary>Fills a random board, advances it many generations beside the reference rules and asserts every board and change list match, returning how many reference births had three different parents.</summary>
+        private static int AssertEvolvesLikeTheReference(int rows, int columns, int seed, CellOwner[] owners)
+        {
+            var grid = CreateEmptyGrid(rows, columns);
+            FillRandomly(grid, seed, owners);
+            var expected = ReadOwners(grid);
+            var birthsFromThreeColours = 0;
+
+            for (var generation = 1; generation <= ManyGenerations; generation++)
+            {
+                var previous = expected;
+                expected = AdvanceByReference(previous, rows, columns, ref birthsFromThreeColours);
+                grid.AdvanceGeneration();
+
+                Assert.That(ReadOwners(grid), Is.EqualTo(expected), $"Generation {generation} of the {rows}x{columns} board (seed {seed}) differs from the reference rules.");
+                Assert.That(grid.ChangedCellIndices, Is.EqualTo(ListChangedCells(previous, expected)), $"Generation {generation} should record exactly the cells that changed, in ascending order.");
+                grid.ClearChangedCells();
+            }
+
+            Assert.That(grid.HasAnyLivingCell(), Is.True, "The board should still be alive, or the comparison proved little.");
+            return birthsFromThreeColours;
+        }
+
+        /// <summary>Gives each cell, with the fill chance, a colour picked at random from the given owners, leaving no recorded changes.</summary>
+        private static void FillRandomly(CellGrid grid, int seed, params CellOwner[] owners)
+        {
+            var random = new Random(seed);
+            for (var cellIndex = 0; cellIndex < grid.CellCount; cellIndex++)
+            {
+                if (random.NextDouble() < RandomFillChance)
+                {
+                    grid.SetOwner(cellIndex, owners[random.Next(owners.Length)]);
+                }
+            }
+
+            grid.ClearChangedCells();
+        }
+
+        /// <summary>Copies every cell's owner, row by row.</summary>
+        private static CellOwner[] ReadOwners(CellGrid grid)
+        {
+            var owners = new CellOwner[grid.CellCount];
+            for (var cellIndex = 0; cellIndex < owners.Length; cellIndex++)
+            {
+                owners[cellIndex] = grid.GetOwner(cellIndex);
+            }
+
+            return owners;
+        }
+
+        /// <summary>Returns the indices whose owner differs between two boards, in ascending order.</summary>
+        private static List<int> ListChangedCells(CellOwner[] before, CellOwner[] after)
+        {
+            var changedCells = new List<int>();
+            for (var cellIndex = 0; cellIndex < before.Length; cellIndex++)
+            {
+                if (before[cellIndex] != after[cellIndex])
+                {
+                    changedCells.Add(cellIndex);
+                }
+            }
+
+            return changedCells;
+        }
+
+        /// <summary>Reference rules written plainly: each cell looks at its in-bounds neighbours on the old board; the living survive on two or three, the dead are born on exactly three with the colour at least two parents share, or else the colour none of them has.</summary>
+        private static CellOwner[] AdvanceByReference(CellOwner[] owners, int rows, int columns, ref int birthsFromThreeColours)
+        {
+            var next = new CellOwner[owners.Length];
+            for (var row = 0; row < rows; row++)
+            {
+                for (var column = 0; column < columns; column++)
+                {
+                    var parents = new List<CellOwner>();
+                    for (var neighbourRow = row - 1; neighbourRow <= row + 1; neighbourRow++)
+                    {
+                        for (var neighbourColumn = column - 1; neighbourColumn <= column + 1; neighbourColumn++)
+                        {
+                            var isSelf = neighbourRow == row && neighbourColumn == column;
+                            var isInside = neighbourRow >= 0 && neighbourRow < rows && neighbourColumn >= 0 && neighbourColumn < columns;
+                            if (!isSelf && isInside && owners[neighbourRow * columns + neighbourColumn] != CellOwner.None)
+                            {
+                                parents.Add(owners[neighbourRow * columns + neighbourColumn]);
+                            }
+                        }
+                    }
+
+                    var cellIndex = row * columns + column;
+                    if (owners[cellIndex] != CellOwner.None)
+                    {
+                        var survives = parents.Count >= NeighboursNeededToSurviveMinimum && parents.Count <= NeighboursNeededToSurviveMaximum;
+                        next[cellIndex] = survives ? owners[cellIndex] : CellOwner.None;
+                    }
+                    else if (parents.Count == NeighboursNeededToBeBorn)
+                    {
+                        next[cellIndex] = ChooseNewbornByReference(parents, ref birthsFromThreeColours);
+                    }
+                }
+            }
+
+            return next;
+        }
+
+        /// <summary>Returns the colour at least two parents share, or, when all three differ, the one living colour none of them has, counting that case.</summary>
+        private static CellOwner ChooseNewbornByReference(List<CellOwner> parents, ref int birthsFromThreeColours)
+        {
+            foreach (var colour in LivingOwners)
+            {
+                var parentsOfColour = 0;
+                foreach (var parent in parents)
+                {
+                    if (parent == colour)
+                    {
+                        parentsOfColour++;
+                    }
+                }
+
+                if (parentsOfColour >= ParentsNeededForAMajority)
+                {
+                    return colour;
+                }
+            }
+
+            birthsFromThreeColours++;
+            foreach (var colour in LivingOwners)
+            {
+                if (!parents.Contains(colour))
+                {
+                    return colour;
+                }
+            }
+
+            throw new InvalidOperationException("Three different parents always leave one of the four colours out.");
         }
     }
 }

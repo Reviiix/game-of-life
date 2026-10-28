@@ -6,7 +6,7 @@ using NUnit.Framework;
 
 namespace GameOfLife.Tests
 {
-    /// <summary>Checks that both opponent strategies only choose legal cells and that Hard scores moves by its immediate, lookahead and sampling rules.</summary>
+    /// <summary>Checks that every opponent strategy only chooses legal cells, and that Hard scores match moves by local survival and a five-generation lookahead.</summary>
     [TestFixture]
     public sealed class OpponentStrategyTests
     {
@@ -14,9 +14,11 @@ namespace GameOfLife.Tests
         private const char PlayerSymbol = 'P';
         private const char OpponentSymbol = 'O';
         private const int SeedsTried = 25;
+        private const int LookaheadGenerations = 5;
 
         /// <summary>Over many seeds, each strategy only picks empty cells inside the region, even when living cells sit just outside it.</summary>
         [TestCase(OpponentDifficulty.Easy)]
+        [TestCase(OpponentDifficulty.Medium)]
         [TestCase(OpponentDifficulty.Hard)]
         public void Strategy_OnlyPicksEmptyCellsInsideTheRegion(OpponentDifficulty difficulty)
         {
@@ -41,7 +43,7 @@ namespace GameOfLife.Tests
             }
         }
 
-        /// <summary>Hard never reaches outside its region for a cell next to life; with no such cell inside the region it falls back to any empty cell there.</summary>
+        /// <summary>In setup, Hard only picks empty cells inside its own rows, even when the only life on the board is outside them.</summary>
         [Test]
         public void Hard_WithLifeOnlyOutsideTheRegion_StillPicksInsideTheRegion()
         {
@@ -66,6 +68,7 @@ namespace GameOfLife.Tests
 
         /// <summary>Each strategy returns false when every cell in the region is occupied, even if the rest of the grid is empty.</summary>
         [TestCase(OpponentDifficulty.Easy)]
+        [TestCase(OpponentDifficulty.Medium)]
         [TestCase(OpponentDifficulty.Hard)]
         public void Strategy_ReturnsFalse_WhenTheRegionIsFull(OpponentDifficulty difficulty)
         {
@@ -85,6 +88,7 @@ namespace GameOfLife.Tests
 
         /// <summary>Each strategy returns false for a region with no rows.</summary>
         [TestCase(OpponentDifficulty.Easy)]
+        [TestCase(OpponentDifficulty.Medium)]
         [TestCase(OpponentDifficulty.Hard)]
         public void Strategy_ReturnsFalse_ForARegionWithNoRows(OpponentDifficulty difficulty)
         {
@@ -98,6 +102,7 @@ namespace GameOfLife.Tests
 
         /// <summary>When the region has a single empty cell, each strategy picks exactly that cell.</summary>
         [TestCase(OpponentDifficulty.Easy)]
+        [TestCase(OpponentDifficulty.Medium)]
         [TestCase(OpponentDifficulty.Hard)]
         public void Strategy_PicksTheOnlyEmptyCellInTheRegion(OpponentDifficulty difficulty)
         {
@@ -114,6 +119,7 @@ namespace GameOfLife.Tests
 
         /// <summary>Choosing a cell leaves the grid's cells and its pending change list exactly as they were.</summary>
         [TestCase(OpponentDifficulty.Easy)]
+        [TestCase(OpponentDifficulty.Medium)]
         [TestCase(OpponentDifficulty.Hard)]
         public void Strategy_NeverChangesTheGrid(OpponentDifficulty difficulty)
         {
@@ -204,7 +210,7 @@ namespace GameOfLife.Tests
             Assert.That(grid.ColumnOf(cellIndex), Is.EqualTo(3));
         }
 
-        /// <summary>Hard still picks a legal cell on an empty board, where no cell is next to life.</summary>
+        /// <summary>In setup on an empty board, Hard still picks a cell in its rows.</summary>
         [Test]
         public void Hard_OnAnEmptyBoard_PicksAnEmptyCellInTheRegion()
         {
@@ -220,9 +226,9 @@ namespace GameOfLife.Tests
             Assert.That(region.Contains(grid, cellIndex), Is.True);
         }
 
-        /// <summary>With far more candidates than Hard scores, and about as many cells away from life, it still picks a legal cell next to life.</summary>
+        /// <summary>In a setup half dotted with lone cells of its own, Hard grows a block from one of them, so its pick is legal and next to life.</summary>
         [Test]
-        public void Hard_WithMoreCandidatesThanItEvaluates_StillPicksALegalCellNextToLife()
+        public void Hard_InSetupAmongLoneCells_BuildsNextToOneOfThem()
         {
             const int size = 40;
             const int latticeSpacing = 4;
@@ -240,9 +246,9 @@ namespace GameOfLife.Tests
             }
         }
 
-        /// <summary>With more candidates than Hard scores, it samples them at random, so the only absorbing move, listed after hundreds of others, is still found.</summary>
+        /// <summary>Hard scores every candidate locally before shortlisting, so the only absorbing move, listed after hundreds of others, is found for every seed.</summary>
         [Test]
-        public void Hard_WithMoreCandidatesThanItEvaluates_SamplesThemAtRandom()
+        public void Hard_ShortlistsTheAbsorbingMove_AmongHundredsOfCandidates()
         {
             const int size = 24;
             const int latticeSpacing = 3;
@@ -254,20 +260,14 @@ namespace GameOfLife.Tests
             SetBlock(grid, blockTopRow, gapColumn + 1, CellOwner.Player);
             grid.ClearChangedCells();
 
-            var seedsThatFoundTheGap = 0;
             for (var seed = 0; seed < SeedsTried; seed++)
             {
                 var strategy = CreateStrategy(OpponentDifficulty.Hard, grid, seed);
 
                 Assert.That(strategy.TryChooseCell(grid, PlacementRegion.WholeGrid(grid), CellOwner.Opponent, out var cellIndex), Is.True);
-                Assert.That(grid.IsAlive(cellIndex), Is.False);
-                if (grid.ColumnOf(cellIndex) == gapColumn && grid.RowOf(cellIndex) >= blockTopRow - 1)
-                {
-                    seedsThatFoundTheGap++;
-                }
+                Assert.That(grid.ColumnOf(cellIndex), Is.EqualTo(gapColumn), $"Seed {seed} chose cell {cellIndex}, which is not in the gap between the blocks.");
+                Assert.That(grid.RowOf(cellIndex), Is.GreaterThanOrEqualTo(blockTopRow - 1), $"Seed {seed} chose cell {cellIndex}, which does not touch both blocks.");
             }
-
-            Assert.That(seedsThatFoundTheGap, Is.GreaterThan(0), "Hard never scored the absorbing cells, so it is not sampling candidates at random.");
         }
 
         /// <summary>Every move adds one cell now, so Hard picks one of the four that turn its pair into an L, the only shape that becomes a block next generation.</summary>
@@ -292,9 +292,9 @@ namespace GameOfLife.Tests
             }
         }
 
-        /// <summary>Only (2,3) links Hard's pair to a lone Player cell, absorbing it at once, and nothing else comes close once that absorption is counted.</summary>
+        /// <summary>Hard turns down a one-cell absorption for the row of three that leaves it more cells five generations later; both moves wipe out the Player.</summary>
         [Test]
-        public void Hard_CountsAbsorptionsStraightAfterItsPlacement()
+        public void Hard_PrefersMoreCellsFiveGenerationsLater_OverAnAbsorptionNow()
         {
             var grid = CreateGrid(
                 ".......",
@@ -304,19 +304,22 @@ namespace GameOfLife.Tests
                 ".......",
                 ".......",
                 ".......");
+            var lastingCell = grid.ToCellIndex(3, 3);
+            var absorbingCell = grid.ToCellIndex(2, 3);
 
+            Assert.That(CountOpponentCellsAfter(grid, lastingCell, LookaheadGenerations), Is.GreaterThan(CountOpponentCellsAfter(grid, absorbingCell, LookaheadGenerations)));
             for (var seed = 0; seed < SeedsTried; seed++)
             {
                 var strategy = CreateStrategy(OpponentDifficulty.Hard, grid, seed);
 
                 Assert.That(strategy.TryChooseCell(grid, PlacementRegion.WholeGrid(grid), CellOwner.Opponent, out var cellIndex), Is.True);
-                Assert.That(cellIndex, Is.EqualTo(grid.ToCellIndex(2, 3)), $"Seed {seed} chose cell {cellIndex}, which absorbs nothing straight away.");
+                Assert.That(cellIndex, Is.EqualTo(lastingCell), $"Seed {seed} chose cell {cellIndex}, which leaves fewer cells five generations later.");
             }
         }
 
-        /// <summary>Placing at (3,1) absorbs nothing now, but next generation Hard's pair grows into a row of three beside the Player's surviving pair and absorbs it.</summary>
+        /// <summary>Of every move beside its lone cell, only (3,0) leaves Hard a lasting block five generations later, so it is chosen over the burst at (3,1) that dies out.</summary>
         [Test]
-        public void Hard_CountsAbsorptionsAfterTheNextGeneration()
+        public void Hard_PrefersTheMoveStillAliveFiveGenerationsLater()
         {
             var grid = CreateGrid(
                 ".......",
@@ -326,13 +329,16 @@ namespace GameOfLife.Tests
                 ".O.....",
                 ".......",
                 ".......");
+            var blockCell = grid.ToCellIndex(3, 0);
 
+            Assert.That(CountOpponentCellsAfter(grid, blockCell, LookaheadGenerations), Is.EqualTo(4));
+            Assert.That(CountOpponentCellsAfter(grid, grid.ToCellIndex(3, 1), LookaheadGenerations), Is.Zero);
             for (var seed = 0; seed < SeedsTried; seed++)
             {
                 var strategy = CreateStrategy(OpponentDifficulty.Hard, grid, seed);
 
                 Assert.That(strategy.TryChooseCell(grid, PlacementRegion.WholeGrid(grid), CellOwner.Opponent, out var cellIndex), Is.True);
-                Assert.That(cellIndex, Is.EqualTo(grid.ToCellIndex(3, 1)), $"Seed {seed} chose cell {cellIndex}, which absorbs nothing next generation.");
+                Assert.That(cellIndex, Is.EqualTo(blockCell), $"Seed {seed} chose cell {cellIndex}, which does not last five generations.");
             }
         }
 
@@ -384,9 +390,10 @@ namespace GameOfLife.Tests
             }
         }
 
-        /// <summary>The same seed and board always produce the same Hard move.</summary>
-        [Test]
-        public void Hard_IsDeterministicForASeed()
+        /// <summary>The same seed and board always produce the same Medium or Hard move.</summary>
+        [TestCase(OpponentDifficulty.Medium)]
+        [TestCase(OpponentDifficulty.Hard)]
+        public void Strategy_IsDeterministicForASeed(OpponentDifficulty difficulty)
         {
             var grid = CreateGrid(
                 "......",
@@ -396,24 +403,26 @@ namespace GameOfLife.Tests
                 ".O....",
                 "......");
 
-            CreateStrategy(OpponentDifficulty.Hard, grid, 11).TryChooseCell(grid, PlacementRegion.WholeGrid(grid), CellOwner.Opponent, out var firstChoice);
-            CreateStrategy(OpponentDifficulty.Hard, grid, 11).TryChooseCell(grid, PlacementRegion.WholeGrid(grid), CellOwner.Opponent, out var secondChoice);
+            CreateStrategy(difficulty, grid, 11).TryChooseCell(grid, PlacementRegion.WholeGrid(grid), CellOwner.Opponent, out var firstChoice);
+            CreateStrategy(difficulty, grid, 11).TryChooseCell(grid, PlacementRegion.WholeGrid(grid), CellOwner.Opponent, out var secondChoice);
 
             Assert.That(secondChoice, Is.EqualTo(firstChoice));
         }
 
-        /// <summary>Hard needs a real side to play for.</summary>
-        [Test]
-        public void Hard_PlayingForNoOne_Throws()
+        /// <summary>Medium and Hard need a real side to play for.</summary>
+        [TestCase(OpponentDifficulty.Medium)]
+        [TestCase(OpponentDifficulty.Hard)]
+        public void Strategy_PlayingForNoOne_Throws(OpponentDifficulty difficulty)
         {
             var grid = CreateGrid("...");
-            var strategy = CreateStrategy(OpponentDifficulty.Hard, grid, 0);
+            var strategy = CreateStrategy(difficulty, grid, 0);
 
             Assert.Throws<ArgumentException>(() => strategy.TryChooseCell(grid, PlacementRegion.WholeGrid(grid), CellOwner.None, out _));
         }
 
         /// <summary>A strategy cannot choose on a grid larger than the size it preallocated for.</summary>
         [TestCase(OpponentDifficulty.Easy)]
+        [TestCase(OpponentDifficulty.Medium)]
         [TestCase(OpponentDifficulty.Hard)]
         public void Strategy_GridLargerThanMaximum_Throws(OpponentDifficulty difficulty)
         {
@@ -425,9 +434,46 @@ namespace GameOfLife.Tests
             Assert.Throws<ArgumentException>(() => strategy.TryChooseCell(grid, PlacementRegion.WholeGrid(grid), CellOwner.Opponent, out _));
         }
 
-        /// <summary>The factory builds the random strategy for Easy and the strategic one for Hard.</summary>
+        /// <summary>A grid with no more cells than the maximum fits whatever its shape, even one row longer than the maximum's.</summary>
+        [TestCase(OpponentDifficulty.Easy)]
+        [TestCase(OpponentDifficulty.Medium)]
+        [TestCase(OpponentDifficulty.Hard)]
+        public void Strategy_OnAGridReshapedWithinTheMaximumCells_StillChooses(OpponentDifficulty difficulty)
+        {
+            var grid = new CellGrid(4, 4);
+            grid.Resize(1, 16);
+            grid.SetOwner(grid.ToCellIndex(0, 5), CellOwner.Player);
+            var strategy = OpponentStrategyFactory.Create(difficulty, new Random(0), 4, 4);
+
+            Assert.That(strategy.TryChooseCell(grid, PlacementRegion.WholeGrid(grid), CellOwner.Opponent, out var cellIndex), Is.True);
+            Assert.That(grid.IsAlive(cellIndex), Is.False);
+        }
+
+        /// <summary>In the match on a board with no life, where the side may place anywhere, Medium and Hard fall back to any empty cell of the grid.</summary>
+        [TestCase(OpponentDifficulty.Medium)]
+        [TestCase(OpponentDifficulty.Hard)]
+        public void Strategy_InTheMatchWithNoLife_FallsBackToAnyEmptyCell(OpponentDifficulty difficulty)
+        {
+            var grid = CreateGrid(
+                "....",
+                "....",
+                "....",
+                "....");
+            var region = PlacementRegion.WholeGrid(grid);
+
+            for (var seed = 0; seed < SeedsTried; seed++)
+            {
+                var strategy = CreateStrategy(difficulty, grid, seed);
+
+                Assert.That(strategy.TryChooseCell(grid, region, CellOwner.Player, out var cellIndex), Is.True);
+                Assert.That(region.CanPlaceOn(grid, cellIndex), Is.True, $"Seed {seed} chose cell {cellIndex}, which the region does not allow.");
+            }
+        }
+
+        /// <summary>The factory builds the random strategy for Easy and the survival strategy for Medium and Hard.</summary>
         [TestCase(OpponentDifficulty.Easy, typeof(RandomOpponentStrategy))]
-        [TestCase(OpponentDifficulty.Hard, typeof(StrategicOpponentStrategy))]
+        [TestCase(OpponentDifficulty.Medium, typeof(SurvivalOpponentStrategy))]
+        [TestCase(OpponentDifficulty.Hard, typeof(SurvivalOpponentStrategy))]
         public void Factory_CreatesTheStrategyForTheDifficulty(OpponentDifficulty difficulty, Type expectedType)
         {
             var strategy = OpponentStrategyFactory.Create(difficulty, new Random(0), 4, 4);
@@ -493,6 +539,7 @@ namespace GameOfLife.Tests
 
         /// <summary>A region starting far past the grid holds no cells, even where its first row times the column count overflows an int.</summary>
         [TestCase(OpponentDifficulty.Easy)]
+        [TestCase(OpponentDifficulty.Medium)]
         [TestCase(OpponentDifficulty.Hard)]
         public void Region_StartingFarPastTheGrid_HoldsNoCells(OpponentDifficulty difficulty)
         {
@@ -518,9 +565,9 @@ namespace GameOfLife.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new PlacementRegion(3, 2));
         }
 
-        /// <summary>Creates a strategy of the given difficulty sized for the grid with a seeded random source.</summary>
-        /// <summary>When the region requires a living neighbour, both strategies only ever pick an empty cell touching a living cell.</summary>
+        /// <summary>When the region requires a living neighbour, every strategy only ever picks an empty cell touching a living cell.</summary>
         [TestCase(OpponentDifficulty.Easy)]
+        [TestCase(OpponentDifficulty.Medium)]
         [TestCase(OpponentDifficulty.Hard)]
         public void Choice_InRegionRequiringLivingNeighbour_AlwaysTouchesALivingCell(OpponentDifficulty difficulty)
         {
@@ -543,8 +590,9 @@ namespace GameOfLife.Tests
             }
         }
 
-        /// <summary>When the region requires a living neighbour and the board is empty, both strategies decline to choose.</summary>
+        /// <summary>When the region requires a living neighbour and the board is empty, every strategy declines to choose.</summary>
         [TestCase(OpponentDifficulty.Easy)]
+        [TestCase(OpponentDifficulty.Medium)]
         [TestCase(OpponentDifficulty.Hard)]
         public void Choice_InRegionRequiringLivingNeighbour_OnEmptyBoard_ReturnsFalse(OpponentDifficulty difficulty)
         {
@@ -574,9 +622,24 @@ namespace GameOfLife.Tests
             Assert.That(bottomRows.CanPlaceOn(grid, grid.ToCellIndex(2, 0)), Is.True);
         }
 
+        /// <summary>Creates a strategy of the given difficulty sized for the grid with a seeded random source.</summary>
         private static IOpponentStrategy CreateStrategy(OpponentDifficulty difficulty, CellGrid grid, int seed)
         {
             return OpponentStrategyFactory.Create(difficulty, new Random(seed), grid.Rows, grid.Columns);
+        }
+
+        /// <summary>Returns how many Opponent cells remain after placing an Opponent square on the cell and running the given generations with absorption, on a copy of the grid.</summary>
+        private static int CountOpponentCellsAfter(CellGrid grid, int cellIndex, int generations)
+        {
+            var outcome = PlaceAndResolve(grid, cellIndex, CellOwner.Opponent);
+            var absorber = new ClusterAbsorber(outcome.MaximumCellCount);
+            for (var generation = 0; generation < generations; generation++)
+            {
+                outcome.AdvanceGeneration();
+                absorber.ResolveAbsorptions(outcome);
+            }
+
+            return outcome.CountCells(CellOwner.Opponent);
         }
 
         /// <summary>Returns a copy of the grid with the cell placed for the side and absorptions resolved, leaving the original untouched.</summary>

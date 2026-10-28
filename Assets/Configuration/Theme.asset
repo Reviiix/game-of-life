@@ -22,6 +22,7 @@ MonoBehaviour:
     inkInverse: {r: 1, g: 1, b: 1, a: 1}
     player: {r: 0, g: 0.4, b: 1, a: 1}
     opponent: {r: 0.9019608, g: 0.14901961, b: 0.14901961, a: 1}
+    accent: {r: 0.76862746, g: 0.54901963, b: 0, a: 1}
     danger: {r: 0.9019608, g: 0.14901961, b: 0.14901961, a: 1}
     scrim: {r: 0, g: 0, b: 0, a: 0.45}
     shade: {r: 0, g: 0, b: 0, a: 0.07}
@@ -35,11 +36,14 @@ MonoBehaviour:
     inkInverse: {r: 0.05882353, g: 0.05882353, b: 0.0627451, a: 1}
     player: {r: 0.23921569, g: 0.54509807, b: 1, a: 1}
     opponent: {r: 1, g: 0.32156864, b: 0.32156864, a: 1}
+    accent: {r: 1, g: 0.776, b: 0.2, a: 1}
     danger: {r: 1, g: 0.32156864, b: 0.32156864, a: 1}
     scrim: {r: 0, g: 0, b: 0, a: 0.6}
     shade: {r: 1, g: 1, b: 1, a: 0.06}
   tileGap: 0.14
   tileRoundness: 0.45
+  ghostTileOpacity: 0.6
+  freshCellBackgroundBlend: 0.45
   cellAppear:
     duration: 0.32
     ease: 27
@@ -55,8 +59,13 @@ MonoBehaviour:
     ease: 24
     overshootOrAmplitude: 1
     period: 0.2
+  cellSettle:
+    duration: 0.5
+    ease: 4
+    overshootOrAmplitude: 1.70158
+    period: 0
   convertSquashScale: 0.5
-  convertColourShare: 0.3
+  colourChangeShare: 0.3
   cellMotionShareOfGeneration: 0.9
   screenShow:
     duration: 0.4

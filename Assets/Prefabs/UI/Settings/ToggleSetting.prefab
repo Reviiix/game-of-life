@@ -201,8 +201,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: GRID HIGHLIGHTS
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 42ef9e72371064556a74a7ecea2903d3, type: 2}
-  m_sharedMaterial: {fileID: -5462910232755998555, guid: 42ef9e72371064556a74a7ecea2903d3, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 46f8159aa8223490fb68c544675e1aab, type: 2}
+  m_sharedMaterial: {fileID: -3323927178666917730, guid: 46f8159aa8223490fb68c544675e1aab, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

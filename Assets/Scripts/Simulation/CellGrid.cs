@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace GameOfLife.Simulation
 {
-    /// <summary>Stores which side owns each cell and advances every cell at once using Conway's rules in two colours.</summary>
+    /// <summary>Stores which side or colour owns each cell and advances every cell at once using Conway's rules, with each newborn taking its parents' colour.</summary>
     public sealed class CellGrid
     {
         private const int MaximumNeighboursPerCell = 8;
@@ -11,9 +11,12 @@ namespace GameOfLife.Simulation
         private const int NeighboursNeededToSurviveMaximum = 3;
         private const int NeighboursNeededToBeBorn = 3;
 
+        private static readonly CellOwner[] LivingOwners = { CellOwner.Player, CellOwner.Opponent, CellOwner.Third, CellOwner.Fourth };
+
         private readonly CellOwner[] cellOwners;
-        private readonly byte[] playerNeighbourCounts;
-        private readonly byte[] opponentNeighbourCounts;
+        private readonly byte[] livingNeighbourCounts;
+        private readonly CellOwner[] nextOwners;
+        private readonly int[] generationChangeIndices;
         private readonly int[] neighbourIndexTable;
         private readonly int[] neighbourCountTable;
         private readonly List<int> changedCellIndices;
@@ -35,8 +38,9 @@ namespace GameOfLife.Simulation
 
             MaximumCellCount = maximumRows * maximumColumns;
             cellOwners = new CellOwner[MaximumCellCount];
-            playerNeighbourCounts = new byte[MaximumCellCount];
-            opponentNeighbourCounts = new byte[MaximumCellCount];
+            livingNeighbourCounts = new byte[MaximumCellCount];
+            nextOwners = new CellOwner[MaximumCellCount];
+            generationChangeIndices = new int[MaximumCellCount];
             neighbourIndexTable = new int[MaximumCellCount * MaximumNeighboursPerCell];
             neighbourCountTable = new int[MaximumCellCount];
             changedCellIndices = new List<int>(MaximumCellCount);
@@ -115,12 +119,6 @@ namespace GameOfLife.Simulation
             RecordChange(cellIndex);
         }
 
-        /// <summary>Flips a cell between dead and a Player cell, as classic mode does, and records the change.</summary>
-        public void ToggleCell(int cellIndex)
-        {
-            SetOwner(cellIndex, IsAlive(cellIndex) ? CellOwner.None : CellOwner.Player);
-        }
-
         /// <summary>Kills every cell and clears the change list, so callers repaint the whole grid.</summary>
         public void KillAllCells()
         {
@@ -154,6 +152,30 @@ namespace GameOfLife.Simulation
             return false;
         }
 
+        /// <summary>Returns whether living cells of at least two different owners are on the board, the only time clusters can absorb each other.</summary>
+        public bool HasLivingCellsOfMoreThanOneOwner()
+        {
+            var cellCount = CellCount;
+            var firstOwner = CellOwner.None;
+            for (var cellIndex = 0; cellIndex < cellCount; cellIndex++)
+            {
+                var owner = cellOwners[cellIndex];
+                if (owner == CellOwner.None || owner == firstOwner)
+                {
+                    continue;
+                }
+
+                if (firstOwner != CellOwner.None)
+                {
+                    return true;
+                }
+
+                firstOwner = owner;
+            }
+
+            return false;
+        }
+
         /// <summary>Counts the cells in the active area with exactly this owner, so None counts empty cells.</summary>
         public int CountCells(CellOwner owner)
         {
@@ -182,20 +204,29 @@ namespace GameOfLife.Simulation
             return neighbourIndexTable[cellIndex * MaximumNeighboursPerCell + neighbourSlot];
         }
 
-        /// <summary>Calculates the next generation for every cell at once from neighbour counts taken first, adding every changed cell to the change list.</summary>
+        /// <summary>Calculates the next generation for every cell at once: every cell is decided from the current board first, then the changes land together and join the change list.</summary>
         public void AdvanceGeneration()
         {
             var cellCount = CellCount;
             CountLivingNeighboursOfEveryCell(cellCount);
+            var generationChangeCount = 0;
             for (var cellIndex = 0; cellIndex < cellCount; cellIndex++)
             {
                 var owner = cellOwners[cellIndex];
-                var nextOwner = DetermineNextOwner(owner, playerNeighbourCounts[cellIndex], opponentNeighbourCounts[cellIndex]);
+                var nextOwner = DetermineNextOwner(cellIndex, owner);
                 if (nextOwner != owner)
                 {
-                    cellOwners[cellIndex] = nextOwner;
-                    RecordChange(cellIndex);
+                    nextOwners[cellIndex] = nextOwner;
+                    generationChangeIndices[generationChangeCount] = cellIndex;
+                    generationChangeCount++;
                 }
+            }
+
+            for (var changePosition = 0; changePosition < generationChangeCount; changePosition++)
+            {
+                var cellIndex = generationChangeIndices[changePosition];
+                cellOwners[cellIndex] = nextOwners[cellIndex];
+                RecordChange(cellIndex);
             }
         }
 
@@ -227,16 +258,16 @@ namespace GameOfLife.Simulation
             ClearChangedCells();
         }
 
-        /// <summary>Returns a cell's owner next generation: survivors keep their colour and newborns take their parents' majority colour.</summary>
-        private static CellOwner DetermineNextOwner(CellOwner owner, int playerNeighbours, int opponentNeighbours)
+        /// <summary>Returns a cell's owner next generation from the current board: survivors keep their colour and newborns take their parents' colour.</summary>
+        private CellOwner DetermineNextOwner(int cellIndex, CellOwner owner)
         {
             var isAlive = owner != CellOwner.None;
-            if (!WillBeAliveNextGeneration(isAlive, playerNeighbours + opponentNeighbours))
+            if (!WillBeAliveNextGeneration(isAlive, livingNeighbourCounts[cellIndex]))
             {
                 return CellOwner.None;
             }
 
-            return isAlive ? owner : ChooseNewbornOwner(playerNeighbours, opponentNeighbours);
+            return isAlive ? owner : ChooseNewbornOwner(cellIndex);
         }
 
         /// <summary>Applies Conway's rules: survive with two or three neighbours, be born with exactly three.</summary>
@@ -250,31 +281,73 @@ namespace GameOfLife.Simulation
             return livingNeighbours == NeighboursNeededToBeBorn;
         }
 
-        /// <summary>Gives a newborn cell the colour held by most of its three parents, which is always a strict majority.</summary>
-        private static CellOwner ChooseNewbornOwner(int playerNeighbours, int opponentNeighbours)
+        /// <summary>Gives a newborn cell the colour held by at least two of its three parents, or, when all three differ, the one living colour none of them has.</summary>
+        private CellOwner ChooseNewbornOwner(int cellIndex)
         {
-            return playerNeighbours > opponentNeighbours ? CellOwner.Player : CellOwner.Opponent;
-        }
-
-        /// <summary>Counts every cell's living neighbours of each colour by adding each living cell to its neighbours' counts, using the lookup table.</summary>
-        private void CountLivingNeighboursOfEveryCell(int cellCount)
-        {
-            Array.Clear(playerNeighbourCounts, 0, cellCount);
-            Array.Clear(opponentNeighbourCounts, 0, cellCount);
-            for (var cellIndex = 0; cellIndex < cellCount; cellIndex++)
+            var first = CellOwner.None;
+            var second = CellOwner.None;
+            var third = CellOwner.None;
+            var tableStart = cellIndex * MaximumNeighboursPerCell;
+            var tableEnd = tableStart + neighbourCountTable[cellIndex];
+            for (var tableIndex = tableStart; tableIndex < tableEnd; tableIndex++)
             {
-                var owner = cellOwners[cellIndex];
-                if (owner == CellOwner.None)
+                var parent = cellOwners[neighbourIndexTable[tableIndex]];
+                if (parent == CellOwner.None)
                 {
                     continue;
                 }
 
-                var neighbourCounts = owner == CellOwner.Player ? playerNeighbourCounts : opponentNeighbourCounts;
+                if (first == CellOwner.None)
+                {
+                    first = parent;
+                }
+                else if (second == CellOwner.None)
+                {
+                    second = parent;
+                }
+                else
+                {
+                    third = parent;
+                }
+            }
+
+            if (first == second || first == third)
+            {
+                return first;
+            }
+
+            if (second == third)
+            {
+                return second;
+            }
+
+            foreach (var owner in LivingOwners)
+            {
+                if (owner != first && owner != second && owner != third)
+                {
+                    return owner;
+                }
+            }
+
+            return first;
+        }
+
+        /// <summary>Counts every cell's living neighbours, whatever their colour, by adding each living cell to its neighbours' counts, using the lookup table.</summary>
+        private void CountLivingNeighboursOfEveryCell(int cellCount)
+        {
+            Array.Clear(livingNeighbourCounts, 0, cellCount);
+            for (var cellIndex = 0; cellIndex < cellCount; cellIndex++)
+            {
+                if (cellOwners[cellIndex] == CellOwner.None)
+                {
+                    continue;
+                }
+
                 var tableStart = cellIndex * MaximumNeighboursPerCell;
                 var tableEnd = tableStart + neighbourCountTable[cellIndex];
                 for (var tableIndex = tableStart; tableIndex < tableEnd; tableIndex++)
                 {
-                    neighbourCounts[neighbourIndexTable[tableIndex]]++;
+                    livingNeighbourCounts[neighbourIndexTable[tableIndex]]++;
                 }
             }
         }
